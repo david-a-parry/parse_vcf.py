@@ -126,14 +126,12 @@ class VcfHeader(object):
             fid   = match_m.group(2)
             if field in self.metadata:
                 if isinstance(self.metadata[field], list):
-                    #could have multiple program fields - use lists
                     self.metadata[field].append(fid)
                 else:
-                    #if we've created a dict something's gone wrong
-                    raise HeaderError("Duplicate key of differing type in " + 
-                                      "metaheader ({}) for line:\n{}" 
-                                      .format(field, h))
+                    #convert dict to list of dicts
+                    self.metadata[field][fid] = [self.metadata[field][fid], d]
             else:
+                #use list by default as some metadata has multiple entries
                 self.metadata[field] = [fid]
         else:
             raise HeaderError("Invalid metaheader line {}".format(h))
