@@ -27,8 +27,13 @@ class VcfReader(object):
         self.reader = (line.rstrip() for line in self.file if line.rstrip())
         self._mode = os.stat(self.filename).st_mode
         #read header information
-        self.header = self._read_header()
-        self.var = None
+        self.header      = self._read_header()
+        #set some header values for convenience
+        self.metadata    = self.header.meta_header
+        self.col_header  = self.header.col_header
+        self.samples     = self.header.samples 
+        self.sample_cols = self.header.sample_cols
+        self.var         = None
         
 
     def _read_header(self):
@@ -82,7 +87,6 @@ class VcfHeader(object):
             if self.col_header[8] != 'FORMAT':
                 raise HeaderError('Invalid column name. Expected {}, got {}'
                                   .format('FORMAT', self.col_header[8]))
-        self.info = {}
         self.metadata = {}
         self._parse_metadata()
 
@@ -128,7 +132,7 @@ class VcfHeader(object):
                 if isinstance(self.metadata[field], list):
                     self.metadata[field].append(fid)
                 else:
-                    #convert dict to list of dicts
+                    #convert to list of strings/dicts
                     self.metadata[field][fid] = [self.metadata[field][fid], d]
             else:
                 #use list by default as some metadata has multiple entries
@@ -138,16 +142,6 @@ class VcfHeader(object):
             
             
                 
-        
-    def _parse_header_info(self, h):
-        ''' parse a single INFO header line and store in self.info dict
-        '''
-        match = self._info_re.match(h)
-        if match:
-            self.info[match.group(1)] = { 'number' : match.group(2),
-                                          'type'   : match.group(3), 
-                                          'desc'   : match.group(4) }
-        
     def search(self, chrom, start=None, end=None):
         """ Retrieve lines by genomic location
             Sets self.reader to an iterator over the resulting lines
