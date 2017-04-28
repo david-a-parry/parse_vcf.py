@@ -21,7 +21,7 @@ class VcfReader(object):
         if compressed is None:
             compressed = filename.endswith((".gz", ".bgz"))
         if compressed:
-            self.file = gzip.open(filename, encoding=encoding, mode='r')
+            self.file = gzip.open(filename, encoding=encoding, mode='rt')
         else:
             self.file = open(filename, encoding=encoding, mode='r')
         self.reader = (line.rstrip() for line in self.file if line.rstrip())
@@ -29,7 +29,7 @@ class VcfReader(object):
         #read header information
         self.header      = self._read_header()
         #set some header values for convenience
-        self.metadata    = self.header.meta_header
+        self.metadata    = self.header.metadata
         self.col_header  = self.header.col_header
         self.samples     = self.header.samples 
         self.sample_cols = self.header.sample_cols
@@ -174,8 +174,10 @@ class VcfHeader(object):
                             "Missing required key '{}' in metaheader line: {}" 
                             .format(k, h))
                 
+
 class HeaderError(Exception):
     pass
+
 
 class ParseError(Exception):
     pass
