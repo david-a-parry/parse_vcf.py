@@ -13,12 +13,19 @@ def test_column_error():
     assert_raises(HeaderError, VcfReader, 'tests/data/invalid_col_header2.vcf')
 
 def test_open():
-    v = VcfReader("tests/data/test1.vcf")
-    assert(v)
+    vcf = VcfReader("tests/data/test1.vcf")
+    assert(vcf)
+    vgz = VcfReader("tests/data/test1.vcf.gz")
+    assert(vgz)
 
 def test_read_header():
-    v = VcfReader("tests/data/test1.vcf")
-    assert_equal(len(v.meta_header), 67)
+    v = VcfReader("tests/data/test1.vcf.gz")
+    assert_equal(len(v.header.meta_header), 67)
+    assert_equal(len(v.col_header), 247)
+    assert_equal(len(v.metadata['INFO'].keys()), 32)
+    assert_equal(len(v.metadata['FORMAT'].keys()), 9)
+    assert_equal(len(v.metadata['ALT'].keys()), 1)
+    assert_equal(len(v.metadata['FILTER'].keys()), 6)
 
 def test_samples():
     v = VcfReader("tests/data/test1.vcf")
