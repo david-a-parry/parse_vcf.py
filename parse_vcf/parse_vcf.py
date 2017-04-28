@@ -67,9 +67,25 @@ class VcfHeader(object):
     ''' Header class storing metadata and sample information for a vcf
     '''
     
-    _meta_re = re.compile(r"""\#\#(\S+?)=(.*)""")
-    _dict_re = re.compile(r"""\#\#(\S+)=<ID=(\S+?)(,(.*))*>""")
-    _subd_re = re.compile(r""",(\S+?)=(\S+|".+?")""")
+    _meta_re = re.compile(r"""\#\#(\S+?)=(.*)""")#should capture any metadata
+    _dict_re = re.compile(r"""                 #for capturing dict-key metadata
+                          \#\#(\S+)            #captures field name (e.g. INFO)
+                          =<ID=(\S+?)          #captures metadata ID
+                          (,(.*))*             #capture remaining keys/values
+                          >""",                #dict line should end with a >
+                          re.X)
+    _subd_re = re.compile(r"""                 #for extracting keys/values from
+                                               #group(3) of _dict_re.match()
+                          ,(\S+?)=             #get key
+                          (".+?"|[^\s,]+)      #value can either be quoted or 
+                                               #else should be all non-comma 
+                                               #and non-whitespace chars
+                         """, re.X)
+    _required_keys = { 'INFO'   : ["Number", "Type", "Description"],
+                       'FORMAT' : ["Number", "Type", "Description"],
+                       'FILTER' : ["Description"],
+                       'ALT'    : ["Description"],
+                     }
     #_alt_re = re.compile(r"""\#\#ALT=<ID=(\w+),Description=(.*)
     #                     (,(\w+)=(.*))*""", re.X)
     #_info_re = re.compile(r"""\#\#INFO=<ID=(\w+),Number=([\w\d\.]),Type=(\w+),
@@ -118,11 +134,14 @@ class VcfHeader(object):
             self._parse_header_line(h)
 
     def _parse_header_line(self, h):
-        ''' will prob delete this cos creating a catchall method is too
-            likely to be bug-prone
+        ''' Parse a metaheader line and assign to self.metadata dict where
+            keys are the type of metadata line and values are dicts of IDs to
+            lists of either dicts of key-value pairs or string values.
         '''
         match_d = self._dict_re.match(h)
         match_m = self._meta_re.match(h)
+        field = None
+        fid   = None
         if match_d:
             #line is an e.g. INFO/FORMAT/FILTER/ALT/contig with multiple keys
             field = match_d.group(1)
@@ -130,31 +149,32 @@ class VcfHeader(object):
             rest  = match_d.group(3)
             d = dict([(x, y) for (x, y) in self._subd_re.findall(rest)])
             if not field in self.metadata:
-                self.metadata[field] = {fid : d}
+                self.metadata[field] = {fid : [d]}
             else:
                 if fid in self.metadata[field]:
-                    #multiple values - create list
-                    self.metadata[field][fid] = [self.metadata[field][fid],  d]
+                    #multiple values - extend list
+                    self.metadata[field][fid].append(d)
                 else:
-                    self.metadata[field][fid] = d
+                    self.metadata[field][fid] = [d]
         elif match_m:
             field = match_m.group(1)
             fid   = match_m.group(2)
             if field in self.metadata:
-                if isinstance(self.metadata[field], list):
-                    self.metadata[field].append(fid)
-                else:
-                    #convert to list of strings/dicts
-                    self.metadata[field][fid] = [self.metadata[field][fid], d]
+                self.metadata[field].append(fid)
             else:
-                #use list by default as some metadata has multiple entries
                 self.metadata[field] = [fid]
         else:
             raise HeaderError("Invalid metaheader line {}".format(h))
-            
-            
+        if field in self._required_keys:
+            #ensure ALT/FORMAT/FILTER/INFO contain required keys
+            last = self.metadata[field][fid][-1]#check entry we've just added
+            for k in self._required_keys[field]:
+                if not k in last:
+                    raise HeaderError(
+                            "Missing required key '{}' in metaheader line: {}" 
+                            .format(k, h))
                 
-    class HeaderError(Exception):
+class HeaderError(Exception):
     pass
 
 class ParseError(Exception):
