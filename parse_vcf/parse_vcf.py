@@ -33,6 +33,7 @@ class VcfReader(object):
         self.col_header  = self.header.col_header
         self.samples     = self.header.samples 
         self.sample_cols = self.header.sample_cols
+        self.parser      = (VcfRecord(line, self.sample_cols) for line in self.reader)
         self.var         = None
         
 
@@ -174,6 +175,105 @@ class VcfHeader(object):
                             "Missing required key '{}' in metaheader line: {}" 
                             .format(k, h))
                 
+
+class VcfRecord(object):
+    ''' A single record from a Vcf created by parsing a non-header line from a
+        VCF file. May contain multiple alternate alleles.
+    '''
+
+    __slots__ = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO',
+                 'FORMAT', '_sample_idx', 'cols', '__CALLS', '__ALLELES',
+                 'GT_FORMAT', '__GT_FIELDS',]
+
+    def __init__(self, line, sample_idx):
+        self.cols = line.split("\t", 9) #only collect first 9 columns initially
+                                        #splitting whole line on a VCF with
+                                        #lots of columns/samples is costly
+
+        ( self.CHROM, self.POS, self.ID, self.REF, self.ALT,  
+          self.QUAL, self.FILTER, self.INFO ) = self.cols[:8] 
+        self.FORMAT    = None
+        self.GT_FORMAT = None
+        self.CALLS     = None
+        self.ALLELES   = None
+        self.GT_FIELDS = None
+        self._sample_idx = sample_idx
+        if len(self.cols) > 8:
+            self.FORMAT = self.cols[8]
+            self.GT_FORMAT = self.FORMAT.split(':')
+
+    @property
+    def ALLELES(self):
+        ''' list of REF and ALT alleles in order
+        '''
+        if self.__ALLELES is None:
+            self.__ALLELES = [self.REF] + self.ALT.split(',')
+        return self.__ALLELES
+        
+    @ALLELES.setter
+    def ALLELES(self, alleles):
+        self.__ALLELES = alleles
+
+    @property
+    def GT_FIELDS(self):
+        ''' dict of Sample names to dict of GT fields to values 
+        '''
+        if self.__GT_FIELDS is None:
+            self.__GT_FIELDS = {}
+            for s in self.CALLS:
+                self.__GT_FIELDS[s] = dict( [(f, v) for (f, v) in zip(
+                                      self.GT_FORMAT, 
+                                      self.CALLS[s].split(':'))] )
+        return self.__GT_FIELDS
+    
+    @GT_FIELDS.setter
+    def GT_FIELDS(self, gtf):
+        self.__GT_FIELDS = gtf
+   
+    @property
+    def CALLS(self):
+        ''' split sample call fields and assign to self.CALLS dict of sample 
+            id to call string. 
+
+            self.CALLS does not get created in __init__ to save on overhead
+            in VCF with many samples where we might not be interested in
+            parsing sample calls 
+            
+            as of python 3.6 the CALLS dict will maintain sample order, but to 
+            safely get a list of calls in the same order as the input VCF the 
+            following syntax should be used:
+
+                >>> v = VcfReader(my_vcf)
+                >>> for record in v.parser:
+                ...     calls = [ record.CALLS[x] for x in v.samples ]
+
+        '''
+        if self.__CALLS is None:
+            if self._sample_idx:
+                calls = self.cols.pop()
+                self.cols.extend(calls.split("\t"))
+                self.__CALLS = dict([(s, self.cols[self._sample_idx[s]]) 
+                                      for s in self._sample_idx]) 
+            else:
+                self.__CALLS = {}
+        return self.__CALLS
+    
+    @CALLS.setter
+    def CALLS(self, calls):
+        self.__CALLS = calls
+
+    def get_call(self, sample):
+        ''' Retrieve call string for a single sample
+            Use CALLS property instead if all sample calls are required
+        '''
+        if self.CALLS:
+            try:
+                return self.CALLS[sample]
+            except KeyError:
+                raise ParseError("Sample '{}' is not in VCF".format(sample))
+        else:
+            return None
+
 
 class HeaderError(Exception):
     pass
