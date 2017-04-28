@@ -52,7 +52,17 @@ class VcfReader(object):
                 raise HeaderError('No column header found for VCF {}' 
                                   .format(self.filename))
         return VcfHeader(meta_header, coln_header)
-        
+     
+    def search(self, chrom, start=None, end=None):
+        """ Retrieve lines by genomic location
+            Sets self.reader to an iterator over the resulting lines
+        """
+        if not S_ISREG(self._mode):
+            raise ParseError("Cannot run search on a non-regular file")
+        pass
+        #TODO
+    
+   
 class VcfHeader(object):
     ''' Header class storing metadata and sample information for a vcf
     '''
@@ -71,6 +81,8 @@ class VcfHeader(object):
     #_contig_re = re.compile(r"""\#\#contig=<ID=(\w+)(,(\w+)=(.*))*""", re.X)
 
     def __init__(self, meta_header, col_header):
+        ''' Requires a list of metaheader lines and a list of column names
+        '''
         self.meta_header = meta_header
         self.col_header  = col_header
         self.samples     = col_header[9:] or None
@@ -142,16 +154,7 @@ class VcfHeader(object):
             
             
                 
-    def search(self, chrom, start=None, end=None):
-        """ Retrieve lines by genomic location
-            Sets self.reader to an iterator over the resulting lines
-        """
-        if not S_ISREG(self._mode):
-            raise ParseError("Cannot run search on a non-regular file")
-        pass
-        #TODO
-    
-class HeaderError(Exception):
+    class HeaderError(Exception):
     pass
 
 class ParseError(Exception):
