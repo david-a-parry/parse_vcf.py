@@ -11,8 +11,9 @@ class VcfReader(object):
     
     def __init__(self, filename=None, compressed=None, encoding='utf-8'):
         """ Create a new VcfReader object
-            Opens the given VCF file and stores the metaheader and sample 
-            information
+ 
+            Opens the given VCF file and stores the metaheader and 
+            sample information
         """
         
         if not filename :
@@ -33,14 +34,16 @@ class VcfReader(object):
         self.col_header  = self.header.col_header
         self.samples     = self.header.samples 
         self.sample_cols = self.header.sample_cols
-        self.parser      = (VcfRecord(line, self.sample_cols) for line in self.reader)
+        self.parser      = (VcfRecord(line, self.sample_cols, self.metadata) 
+                                      for line in self.reader)
         self.var         = None
         
 
     def _read_header(self):
-        """ called after opening VCF. This reads the meta header lines into a
-            list, gets columns names and sample names
+        """ called after opening VCF. This reads the meta header lines 
+            into a list, gets columns names and sample names
         """
+
         meta_header = []
         coln_header  = []
         for line in self.reader:
@@ -65,8 +68,7 @@ class VcfReader(object):
     
    
 class VcfHeader(object):
-    ''' Header class storing metadata and sample information for a vcf
-    '''
+    ''' Header class storing metadata and sample information for a vcf '''
     
     _meta_re = re.compile(r"""\#\#(\S+?)=(.*)""")#should capture any metadata
     _dict_re = re.compile(r"""                 #for capturing dict-key metadata
@@ -87,19 +89,12 @@ class VcfHeader(object):
                        'FILTER' : ["Description"],
                        'ALT'    : ["Description"],
                      }
-    #_alt_re = re.compile(r"""\#\#ALT=<ID=(\w+),Description=(.*)
-    #                     (,(\w+)=(.*))*""", re.X)
-    #_info_re = re.compile(r"""\#\#INFO=<ID=(\w+),Number=([\w\d\.]),Type=(\w+),
-    #                      Description=(.*)(,(\w+)=(.*))*""", re.X)
-    #_format_re = re.compile(r"""\#\#FORMAT=<ID=(\w+),Number=([\w\d\.]),
-    #                        Type=(\w+),Description=(.*)(,(\w+)=(.*))*""", re.X)
-    #_filter_re = re.compile(r"""\#\#FILTER=<ID=(\w+),Description=(.*)
-    #                        (,(\w+)=(.*))*""", re.X)
-    #_contig_re = re.compile(r"""\#\#contig=<ID=(\w+)(,(\w+)=(.*))*""", re.X)
 
     def __init__(self, meta_header, col_header):
-        ''' Requires a list of metaheader lines and a list of column names
+        ''' Requires a list of metaheader lines and a list of column
+            names
         '''
+
         self.meta_header = meta_header
         self.col_header  = col_header
         self.samples     = col_header[9:] or None
@@ -124,6 +119,7 @@ class VcfHeader(object):
         ''' Extract INFO, FORMAT, FILTER and contig information from VCF 
             meta header and store in dicts
         '''
+
         #check first line is essential fileformat line
         ff_match = self._meta_re.match(self.meta_header[0])
         if not ff_match or ff_match.group(1) != 'fileformat':
@@ -139,6 +135,7 @@ class VcfHeader(object):
             keys are the type of metadata line and values are dicts of IDs to
             lists of either dicts of key-value pairs or string values.
         '''
+
         match_d = self._dict_re.match(h)
         match_m = self._meta_re.match(h)
         field = None
@@ -177,35 +174,38 @@ class VcfHeader(object):
                 
 
 class VcfRecord(object):
-    ''' A single record from a Vcf created by parsing a non-header line from a
-        VCF file. May contain multiple alternate alleles.
+    ''' A single record from a Vcf created by parsing a non-header line 
+        from a VCF file. May contain multiple alternate alleles.
     '''
 
-    __slots__ = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO',
-                 'FORMAT', '_sample_idx', 'cols', '__CALLS', '__ALLELES',
-                 'GT_FORMAT', '__GT_FIELDS',]
+    __slots__ = ['cols', '_metadata', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 
+                 'QUAL', 'FILTER', 'INFO', 'FORMAT', '_sample_idx', '__CALLS', 
+                 '__ALLELES', 'GT_FORMAT', '_SAMPLE_GTS', '_gotGts']
 
-    def __init__(self, line, sample_idx):
+    def __init__(self, line, sample_idx, metadata):
         self.cols = line.split("\t", 9) #only collect first 9 columns initially
                                         #splitting whole line on a VCF with
                                         #lots of columns/samples is costly
 
         ( self.CHROM, self.POS, self.ID, self.REF, self.ALT,  
           self.QUAL, self.FILTER, self.INFO ) = self.cols[:8] 
-        self.FORMAT    = None
-        self.GT_FORMAT = None
-        self.CALLS     = None
-        self.ALLELES   = None
-        self.GT_FIELDS = None
+        self.FORMAT     = None
+        self.GT_FORMAT  = None
+        self.CALLS      = None
+        self.ALLELES    = None
+        self._gotGts    = False         #flag indicating whether we've already 
+                                        #retrieved GT dicts for every sample
+        self._SAMPLE_GTS = {}
         self._sample_idx = sample_idx
+        self._metadata = metadata
         if len(self.cols) > 8:
             self.FORMAT = self.cols[8]
             self.GT_FORMAT = self.FORMAT.split(':')
 
     @property
     def ALLELES(self):
-        ''' list of REF and ALT alleles in order
-        '''
+        ''' list of REF and ALT alleles in order '''
+
         if self.__ALLELES is None:
             self.__ALLELES = [self.REF] + self.ALT.split(',')
         return self.__ALLELES
@@ -214,22 +214,6 @@ class VcfRecord(object):
     def ALLELES(self, alleles):
         self.__ALLELES = alleles
 
-    @property
-    def GT_FIELDS(self):
-        ''' dict of Sample names to dict of GT fields to values 
-        '''
-        if self.__GT_FIELDS is None:
-            self.__GT_FIELDS = {}
-            for s in self.CALLS:
-                self.__GT_FIELDS[s] = dict( [(f, v) for (f, v) in zip(
-                                      self.GT_FORMAT, 
-                                      self.CALLS[s].split(':'))] )
-        return self.__GT_FIELDS
-    
-    @GT_FIELDS.setter
-    def GT_FIELDS(self, gtf):
-        self.__GT_FIELDS = gtf
-   
     @property
     def CALLS(self):
         ''' split sample call fields and assign to self.CALLS dict of sample 
@@ -248,6 +232,7 @@ class VcfRecord(object):
                 ...     calls = [ record.CALLS[x] for x in v.samples ]
 
         '''
+
         if self.__CALLS is None:
             if self._sample_idx:
                 calls = self.cols.pop()
@@ -261,18 +246,50 @@ class VcfRecord(object):
     @CALLS.setter
     def CALLS(self, calls):
         self.__CALLS = calls
+     
+    def sample_calls(self):
+        ''' Retrieve a dict of sample names to a dict of genotype field
+            names to values.
+            
+            >>> d = record.sample_calls()
+            >>> s1 = d['Sample_1']
+            >>> gq = s1['GQ']
 
-    def get_call(self, sample):
-        ''' Retrieve call string for a single sample
-            Use CALLS property instead if all sample calls are required
+            ...or more concisely:
+
+            >>> gq = record.sample_calls()['Sample_1']['GQ']
         '''
-        if self.CALLS:
-            try:
-                return self.CALLS[sample]
-            except KeyError:
-                raise ParseError("Sample '{}' is not in VCF".format(sample))
+
+        if self._gotGts:
+            return self._SAMPLE_GTS
         else:
-            return None
+            self._gotGts = True
+            return dict([(s, self.get_gt(s)) for s in self._sample_idx ])
+
+    def get_gt(self, sample):
+        ''' Retrieve a dict of genotype field names to values for a 
+            single sample.
+        
+            This method creates dicts as needed for given samples, so 
+            may be more efficient than using the 'sample_calls()' 
+            method when parsing a VCF with many samples and you are 
+            only interested in a information from a small number of 
+            these samples.
+            
+            >>> s1 = record.get_gt['Sample_1']
+            >>> gq = s1['GQ']
+        '''
+
+        try:
+            return self._SAMPLE_GTS[sample]
+        except KeyError:
+            if sample in self.CALLS:
+                d = dict( [(f, v) for (f, v) in zip(self.GT_FORMAT, 
+                                            (self.CALLS[sample].split(':')))] )
+                self._SAMPLE_GTS[sample] = d
+                return d
+            else:
+                raise ParseError("Sample {} is not in VCF" .format(sample))
 
 
 class HeaderError(Exception):
