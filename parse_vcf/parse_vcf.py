@@ -4,13 +4,84 @@ import re
 import warnings
 from stat import S_ISREG
 
+#common INFO fields and their types in case absent from header
+COMMON_INFO = {
+    '1000G' : {'Type' : 'Flag', 'Number' : 1},
+    'AA' : {'Type' : 'String', 'Number' : 1},
+    'AC' : {'Type' : 'Integer', 'Number' : 'A'},
+    'AF' : {'Type' : 'Float', 'Number' : 'A'},
+    'AN' : {'Type' : 'Integer', 'Number' : 1},
+    'BQ' : {'Type' : 'Float', 'Number' : 1},
+    'CIGAR' : {'Type' : 'String', 'Number' : 1},
+    'DB' : {'Type' : 'Flag', 'Number' : 1},
+    'DP' : {'Type' : 'Integer', 'Number' : 1},
+    'END' : {'Type' : 'Integer', 'Number' : 1},
+    'H2' : {'Type' : 'Flag', 'Number' : 1},
+    'H3' : {'Type' : 'Flag', 'Number' : 1},
+    'MQ' : {'Type' : 'Float', 'Number' : 1},
+    'MQ0' : {'Type' : 'Integer', 'Number' : 1},
+    'NS' : {'Type' : 'Integer', 'Number' : 1},
+    'SB' : {'Type' : 'String', 'Number' : 1},
+    'SOMATIC' : {'Type' : 'Flag', 'Number' : 1},
+    'VALIDATED' : {'Type' : 'Flag', 'Number' : 1},
+    # for SVs
+    'BKPTID' : {'Type' : 'String', 'Number' : '.'},
+    'CICN' : {'Type' : 'Integer', 'Number' : 2},
+    'CICNADJ' : {'Type' : 'Integer', 'Number' : 1},
+    'CIEND' : {'Type' : 'Integer', 'Number' : 2},
+    'CILEN' : {'Type' : 'Integer', 'Number' : 2},
+    'CIPOS' : {'Type' : 'Integer', 'Number' : 2},
+    'CN' : {'Type' : 'Integer', 'Number' : 1},
+    'CNADJ' : {'Type' : 'Integer', 'Number' : '.'},
+    'DBRIPID' : {'Type' : 'String', 'Number' : 1},
+    'DBVARID' : {'Type' : 'String', 'Number' : 1},
+    'DGVID' : {'Type' : 'String', 'Number' : 1},
+    'DPADJ' : {'Type' : 'Integer', 'Number' : 1},
+    'EVENT' : {'Type' : 'String', 'Number' : 1},
+    'HOMLEN' : {'Type' : 'Integer', 'Number' : '.'},
+    'HOMSEQ' : {'Type' : 'String', 'Number' : '.'},
+    'IMPRECISE' : {'Type' : 'Flag', 'Number' : 1},
+    'MATEID' : {'Type' : 'String', 'Number' : 1},
+    'MEINFO' : {'Type' : 'String', 'Number' : 4},
+    'METRANS' : {'Type' : 'String', 'Number' : 4},
+    'NOVEL' : {'Type' : 'Flag', 'Number' : 1},
+    'PARID' : {'Type' : 'String', 'Number' : 1},
+    'SVLEN' : {'Type' : 'Integer', 'Number' : 1},
+    'SVTYPE' : {'Type' : 'String', 'Number' : 1},
+}
+
+#common genotype FORMAT Fields and their types in case absent from header
+COMMON_FORMAT = {
+    'DP'  : {'Type' : 'Integer', 'Number' : 1},
+    'EC'  : {'Type' : 'Integer', 'Number' : 'A'},
+    'FT'  : {'Type' : 'String', 'Number' : 1},
+    'GL'  : {'Type' : 'Float', 'Number' : 'G'},
+    'GLE' : {'Type' : 'String', 'Number' : '.'},
+    'GP'  : {'Type' : 'Float', 'Number' : 'G'},
+    'GQ'  : {'Type' : 'Integer', 'Number' : 1},
+    'GT'  : {'Type' : 'String', 'Number' : 1},
+    'HQ'  : {'Type' : 'Integer', 'Number' : 2},
+    'MQ'  : {'Type' : 'Integer', 'Number' : 1},
+    'PL'  : {'Type' : 'Integer', 'Number' : 1},
+    'PQ'  : {'Type' : 'Integer', 'Number' : 1},
+    'PS'  : {'Type' : 'Integer', 'Number' : 1},
+    # for SVs
+    'CN' : {'Type' : 'Integer', 'Number' : 1},
+    'CNQ' : {'Type' : 'Float', 'Number' : 1},
+    'CNL' : {'Type' : 'Float', 'Number' : '.'},
+    'NQ' : {'Type' : 'Integer', 'Number' : 1},
+    'HAP' : {'Type' : 'Integer', 'Number' : 1},
+    'AHAP' : {'Type' : 'Integer', 'Number' : 1}
+}
 
 class VcfReader(object):
-    """ doc TODO
+    """ 
+        doc TODO
     """
     
     def __init__(self, filename=None, compressed=None, encoding='utf-8'):
-        """ Create a new VcfReader object
+        """ 
+            Create a new VcfReader object
  
             Opens the given VCF file and stores the metaheader and 
             sample information
@@ -40,7 +111,8 @@ class VcfReader(object):
         
 
     def _read_header(self):
-        """ called after opening VCF. This reads the meta header lines 
+        """ 
+            Called after opening VCF. This reads the meta header lines 
             into a list, gets columns names and sample names
         """
 
@@ -58,7 +130,8 @@ class VcfReader(object):
         return VcfHeader(meta_header, coln_header)
      
     def search(self, chrom, start=None, end=None):
-        """ Retrieve lines by genomic location
+        """ 
+            Retrieve lines by genomic location
             Sets self.reader to an iterator over the resulting lines
         """
         if not S_ISREG(self._mode):
@@ -116,7 +189,8 @@ class VcfHeader(object):
 
 
     def _parse_metadata(self):
-        ''' Extract INFO, FORMAT, FILTER and contig information from VCF 
+        ''' 
+            Extract INFO, FORMAT, FILTER and contig information from VCF 
             meta header and store in dicts
         '''
 
@@ -131,7 +205,8 @@ class VcfHeader(object):
             self._parse_header_line(h)
 
     def _parse_header_line(self, h):
-        ''' Parse a metaheader line and assign to self.metadata dict where
+        ''' 
+            Parse a metaheader line and assign to self.metadata dict where
             keys are the type of metadata line and values are dicts of IDs to
             lists of either dicts of key-value pairs or string values.
         '''
@@ -174,13 +249,14 @@ class VcfHeader(object):
                 
 
 class VcfRecord(object):
-    ''' A single record from a Vcf created by parsing a non-header line 
+    ''' 
+        A single record from a Vcf created by parsing a non-header line 
         from a VCF file. May contain multiple alternate alleles.
     '''
 
     __slots__ = ['cols', '_metadata', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 
                  'QUAL', 'FILTER', 'INFO', 'FORMAT', '_sample_idx', '__CALLS', 
-                 '__ALLELES', 'GT_FORMAT', '_SAMPLE_GTS', '_gotGts']
+                 '__ALLELES', 'GT_FORMAT', '_SAMPLE_GTS', '_got_gts']
 
     def __init__(self, line, sample_idx, metadata):
         self.cols = line.split("\t", 9) #only collect first 9 columns initially
@@ -193,7 +269,7 @@ class VcfRecord(object):
         self.GT_FORMAT  = None
         self.CALLS      = None
         self.ALLELES    = None
-        self._gotGts    = False         #flag indicating whether we've already 
+        self._got_gts    = False         #flag indicating whether we've already 
                                         #retrieved GT dicts for every sample
         self._SAMPLE_GTS = {}
         self._sample_idx = sample_idx
@@ -216,7 +292,8 @@ class VcfRecord(object):
 
     @property
     def CALLS(self):
-        ''' split sample call fields and assign to self.CALLS dict of sample 
+        '''
+            split sample call fields and assign to self.CALLS dict of sample 
             id to call string. 
 
             self.CALLS does not get created in __init__ to save on overhead
@@ -227,9 +304,9 @@ class VcfRecord(object):
             safely get a list of calls in the same order as the input VCF the 
             following syntax should be used:
 
-                >>> v = VcfReader(my_vcf)
-                >>> for record in v.parser:
-                ...     calls = [ record.CALLS[x] for x in v.samples ]
+            >>> v = VcfReader(my_vcf)
+            >>> for record in v.parser:
+            ...     calls = [ record.CALLS[x] for x in v.samples ]
 
         '''
 
@@ -248,8 +325,9 @@ class VcfRecord(object):
         self.__CALLS = calls
      
     def sample_calls(self):
-        ''' Retrieve a dict of sample names to a dict of genotype field
-            names to values.
+        ''' 
+            Retrieve a dict of sample names to a dict of genotype field
+            names to values. All returned values are strings.
             
             >>> d = record.sample_calls()
             >>> s1 = d['Sample_1']
@@ -260,14 +338,16 @@ class VcfRecord(object):
             >>> gq = record.sample_calls()['Sample_1']['GQ']
         '''
 
-        if self._gotGts:
+        if self._got_gts:
             return self._SAMPLE_GTS
         else:
-            self._gotGts = True
-            return dict([(s, self.get_gt(s)) for s in self._sample_idx ])
+            self._got_gts = True
+            return dict([(s, self.get_sample_call(s)) 
+                         for s in self._sample_idx ])
 
-    def get_gt(self, sample):
-        ''' Retrieve a dict of genotype field names to values for a 
+    def get_sample_call(self, sample):
+        ''' 
+            Retrieve a dict of genotype field names to values for a 
             single sample.
         
             This method creates dicts as needed for given samples, so 
@@ -276,8 +356,13 @@ class VcfRecord(object):
             only interested in a information from a small number of 
             these samples.
             
-            >>> s1 = record.get_gt['Sample_1']
-            >>> gq = s1['GQ']
+            Args:
+                sample: name of the sample to retrieve (as it appears 
+                        in the VCF header
+
+            Example: 
+                >>> s1 = record.get_sample_call['Sample_1']
+                >>> gq = s1['GQ']
         '''
 
         try:
@@ -290,6 +375,79 @@ class VcfRecord(object):
                 return d
             else:
                 raise ParseError("Sample {} is not in VCF" .format(sample))
+
+    def get_parsed_gt_fields(self, field, values=[]):
+        '''
+            Retrieves values of genotype field parsed so that the 
+            returned values are of the expected type (str, int or float)
+            and are split into list format if appropriate. Fields are 
+            handled according to the information present in the VCF 
+            header metadata 
+
+            Args:
+                field:  genotype field to retrieve as it appears in the 
+                        FORMAT field of the VCF record and in the VCF 
+                        header.
+
+                values: list of values from a genotype field
+        '''
+        
+        f = self._get_field_translation('FORMAT', field)
+        #f[0] is the class type of field, f[1] = True if values should be split
+        pv = []
+        for val in values:
+            try: 
+                if f[1]:
+                    l = list(f[0](s) for s in val.split(','))
+                    pv.append(l)
+                else:
+                    pv.append(f[0](val))
+            except ValueError:
+                if val == '.':
+                    if f[1]:
+                        pv.append([None])
+                    else:
+                        pv.append(None)
+                else:
+                    raise ParseError("Unexpected value type for " +
+                                     "{} ".format(field) + "FORMAT field at " +
+                                     " {}:{}" .format(self.CHROM, self.POS))
+        return pv
+
+    def _get_field_translation(self, field_type, field):
+        '''
+            returns a tuple of variable class type (int, float or str)
+            and whether the value requires splitting
+        '''
+
+        try:
+            f = self._metadata[field_type][field][0]
+        except KeyError:
+            try:
+                f = COMMON_FORMAT[field]
+            except KeyError:
+                raise ParseError("Unrecognised FORMAT field '{}'"
+                                 .format(field) + "at {}:{}. " 
+                                 .format(self.CHROM, self.POS) + 
+                                 "Non-standard  FORMAT fields should be " + 
+                                 "represented in VCF header.")
+        ctype = None
+        if f['Type'] == 'String' or f['Type'] == 'Character':
+            ctype = str
+        elif f['Type'] == 'Float':
+            ctype = float
+        elif f['Type'] == 'Integer':
+            ctype = int
+        else:
+            raise ParseError("Unrecognised FORMAT Type '{}' at {}:{}" 
+                             .format(f['Type'], self.CHROM, self.POS))
+        split = False
+        try:
+            if int(f['Number']) > 1:
+                split = True
+        except ValueError:
+            split = True
+        return (ctype, split)
 
 
 class HeaderError(Exception):
