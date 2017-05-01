@@ -3,6 +3,11 @@ import gzip
 import re
 import warnings
 from stat import S_ISREG
+try:
+    import pysam
+except ImportError:
+    pysam = None
+
 
 #common INFO fields and their types in case absent from header
 COMMON_INFO = {
@@ -90,9 +95,12 @@ class VcfReader(object):
         if not filename :
             raise ParseError('You must provide a filename')
         self.filename = filename
-        if compressed is None:
-            compressed = filename.endswith((".gz", ".bgz"))
-        if compressed:
+        self.compressed = compressed
+        self.encoding = encoding
+        self._tabix = None
+        if self.compressed is None:
+            self.compressed = filename.endswith((".gz", ".bgz"))
+        if self.compressed:
             self.file = gzip.open(filename, encoding=encoding, mode='rt')
         else:
             self.file = open(filename, encoding=encoding, mode='r')
@@ -105,8 +113,7 @@ class VcfReader(object):
         self.col_header  = self.header.col_header
         self.samples     = self.header.samples 
         self.sample_cols = self.header.sample_cols
-        self.parser      = (VcfRecord(line, self,) 
-                                      for line in self.reader)
+        self.parser      = (VcfRecord(line, self,) for line in self.reader)
         self.var         = None
         
 
@@ -129,17 +136,66 @@ class VcfReader(object):
                                   .format(self.filename))
         return VcfHeader(meta_header, coln_header)
      
-    def search(self, chrom, start=None, end=None):
+    def set_region(self, chrom, start=None, end=None):
         """ 
-            Retrieve lines by genomic location
-            Sets self.reader to an iterator over the resulting lines
+            Retrieve records by genomic location rather than reading 
+            records line-by-line.
+
+            Sets self.reader and self.parser to iterators over the 
+            records retrieved.
+
+            Args:
+                chrom: chromosome or contig name. Required. You may 
+                       instead provide a region in format 
+                       'chr:start-end' if preferred instead of using 
+                       start/end arguments below. 
+
+                start: start position on chromosome/contig. 0-based
+                       Default = None
+
+                end:   end position on chromosome/contig. 
+                       Default = None
+
+            >>> v = VcfReader(my_vcf)
+            >>> v.set_region('chr1')
+            >>> v.set_region(chrom='chr1', start=999999 end=1000000)
+            >>> v.set_region('chr1:1000000-1000000')
+            >>> for record in v.parser:
+            ... #do something with each record
+
         """
         if not S_ISREG(self._mode):
-            raise ParseError("Cannot run search on a non-regular file")
-        pass
-        #TODO
-    
-   
+            raise ParseError("Cannot run set_region() on a non-regular file")
+        if (self.compressed):
+            if not pysam:
+                raise ParseError("pysam not available. Please install (e.g. " + 
+                                 "via 'pip install pysam' to search by " + 
+                                 "location on bgzip compressed VCFs.")
+            idx = self.filename + '.tbi'
+            if not os.path.isfile(idx):       #create index if it doesn't exist
+                pysam.tabix_index(self.filename, preset="vcf")
+            if not self._tabix:
+                self._tabix = pysam.Tabixfile(self.filename, 
+                                              encoding=self.encoding)
+            try:
+                self.reader = self._tabix.fetch(str(chrom), start, end)
+                self.parser = (VcfRecord(line, self,) for line in self.reader)
+            except ValueError as oops:
+                contig = str(chrom).split(':')[0] #chrom could be a region or 
+                                                  #just an int
+                if contig not in self._tabix.contigs:
+                    warnings.warn("Contig '{}' not found in VCF '{}'" 
+                                  .format(contig, self.filename))
+                else:
+                    raise oops
+        else:
+            #easy solution - compress and index with pysam if not compressed,
+            #but will be slow...
+            #less easy solution, implement a custom index to seek to and from
+            raise ParseError("Searching by location is not yet implemented " +
+                             "for non-bgzip compressed VCFs.")
+
+
 class VcfHeader(object):
     ''' Header class storing metadata and sample information for a vcf '''
     
