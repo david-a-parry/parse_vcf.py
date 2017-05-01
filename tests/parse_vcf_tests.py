@@ -17,6 +17,8 @@ def test_open():
     assert(vcf)
     vgz = VcfReader("tests/data/test1.vcf.gz")
     assert(vgz)
+    bcf = VcfReader("tests/data/test1.bcf")
+    assert(vgz)
 
 def test_read_header():
     v = VcfReader("tests/data/test1.vcf.gz")
@@ -28,7 +30,7 @@ def test_read_header():
     assert_equal(len(v.metadata['FILTER'].keys()), 6)
 
 def test_samples():
-    v = VcfReader("tests/data/test1.vcf")
+    v = VcfReader("tests/data/test1.bcf")
     assert_equal(len(v.samples), 238)
     for i in range(1, 239):
         sample = "Sample_" + str(i)
