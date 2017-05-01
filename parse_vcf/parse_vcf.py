@@ -105,7 +105,7 @@ class VcfReader(object):
         self.col_header  = self.header.col_header
         self.samples     = self.header.samples 
         self.sample_cols = self.header.sample_cols
-        self.parser      = (VcfRecord(line, self.sample_cols, self.metadata) 
+        self.parser      = (VcfRecord(line, self,) 
                                       for line in self.reader)
         self.var         = None
         
@@ -255,25 +255,42 @@ class VcfRecord(object):
     '''
 
     __slots__ = ['cols', '_metadata', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 
-                 'QUAL', 'FILTER', 'INFO', 'FORMAT', '_sample_idx', '__CALLS', 
-                 '__ALLELES', 'GT_FORMAT', '_SAMPLE_GTS', '_got_gts']
+                 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'samples', '_sample_idx',  
+                 '__CALLS', '__ALLELES', 'GT_FORMAT', '_SAMPLE_GTS', '_got_gts'
+                ]
 
-    def __init__(self, line, sample_idx, metadata):
+    def __init__(self, line, caller):
+        ''' VcfRecord objects require a line and a related VcfReader 
+            object for initialization.
+
+            Args:
+                line:   a non-header line from a VCF file without 
+                        newline character
+                
+                caller: a VcfReader object (normally the same VcfReader 
+                        object that read the input line). Metadata and 
+                        sample information will be read from this object 
+                        in order to initialize the VcfRecord object.
+
+        '''
+
         self.cols = line.split("\t", 9) #only collect first 9 columns initially
                                         #splitting whole line on a VCF with
                                         #lots of columns/samples is costly
 
         ( self.CHROM, self.POS, self.ID, self.REF, self.ALT,  
           self.QUAL, self.FILTER, self.INFO ) = self.cols[:8] 
-        self.FORMAT     = None
-        self.GT_FORMAT  = None
-        self.CALLS      = None
-        self.ALLELES    = None
-        self._got_gts    = False         #flag indicating whether we've already 
-                                        #retrieved GT dicts for every sample
+        self.FORMAT      = None
+        self.GT_FORMAT   = None
+        self.CALLS       = None
+        self.ALLELES     = None
+        self.samples     = caller.samples    #should maintain order from header
+        self._sample_idx = caller.sample_cols 
+        self._metadata   = caller.metadata
         self._SAMPLE_GTS = {}
-        self._sample_idx = sample_idx
-        self._metadata = metadata
+        self._got_gts    = False         #flag indicating whether we've already 
+                                         #retrieved GT dicts for every sample
+
         if len(self.cols) > 8:
             self.FORMAT = self.cols[8]
             self.GT_FORMAT = self.FORMAT.split(':')
@@ -293,20 +310,20 @@ class VcfRecord(object):
     @property
     def CALLS(self):
         '''
-            split sample call fields and assign to self.CALLS dict of sample 
-            id to call string. 
+            split sample call fields and assign to self.CALLS dict of
+            sample id to call string. 
 
-            self.CALLS does not get created in __init__ to save on overhead
-            in VCF with many samples where we might not be interested in
-            parsing sample calls 
+            self.CALLS does not get created in __init__ to save on 
+            overhead in VCF with many samples where we might not be 
+            interested in parsing sample calls 
             
-            as of python 3.6 the CALLS dict will maintain sample order, but to 
-            safely get a list of calls in the same order as the input VCF the 
-            following syntax should be used:
+            As of python 3.6 the CALLS dict will maintain sample order,
+            but to safely get a list of calls in the same order as the 
+            input VCF the following syntax should be used:
 
             >>> v = VcfReader(my_vcf)
             >>> for record in v.parser:
-            ...     calls = [ record.CALLS[x] for x in v.samples ]
+            ...     calls = [record.CALLS[x] for x in record.samples]
 
         '''
 
@@ -315,7 +332,7 @@ class VcfRecord(object):
                 calls = self.cols.pop()
                 self.cols.extend(calls.split("\t"))
                 self.__CALLS = dict([(s, self.cols[self._sample_idx[s]]) 
-                                      for s in self._sample_idx]) 
+                                      for s in self.samples]) 
             else:
                 self.__CALLS = {}
         return self.__CALLS
@@ -327,8 +344,14 @@ class VcfRecord(object):
     def sample_calls(self):
         ''' 
             Retrieve a dict of sample names to a dict of genotype field
-            names to values. All returned values are strings.
+            names to values. All returned values are strings. For 
+            values cast to the appropriate types (int/float/string/list)
+            use the 'parsed_gts' function.
             
+            >>> record.sample_calls()
+            {'Sample_1': {'GT': '0/0', 'AD': '10,0', 'DP': '10', 'GQ': '30'}
+            'Sample_2': {'GT': '0/1', 'AD': '6,6', 'DP': '12', 'GQ': '33'}}
+
             >>> d = record.sample_calls()
             >>> s1 = d['Sample_1']
             >>> gq = s1['GQ']
@@ -342,26 +365,35 @@ class VcfRecord(object):
             return self._SAMPLE_GTS
         else:
             self._got_gts = True
+            #get_sample_call() sets self._SAMPLE_GTS[s] for future use
             return dict([(s, self.get_sample_call(s)) 
-                         for s in self._sample_idx ])
+                          for s in self.samples ]) 
+
+
 
     def get_sample_call(self, sample):
         ''' 
             Retrieve a dict of genotype field names to values for a 
-            single sample.
-        
+            single sample.  
+       
             This method creates dicts as needed for given samples, so 
             may be more efficient than using the 'sample_calls()' 
             method when parsing a VCF with many samples and you are 
             only interested in a information from a small number of 
             these samples.
             
+            All values returned are strings. For values cast to an 
+            appropriate type (int/float/string/list) use the 
+            'parsed_gts(sample)' function.
+           
             Args:
                 sample: name of the sample to retrieve (as it appears 
                         in the VCF header
 
             Example: 
-                >>> s1 = record.get_sample_call['Sample_1']
+                >>> s1 = record.get_sample_call('Sample_1')
+                >>> s1
+                {'GT': '0/0', 'AD': '10,0', 'DP': '10', 'GQ': '30'}
                 >>> gq = s1['GQ']
         '''
 
@@ -372,11 +404,53 @@ class VcfRecord(object):
                 d = dict( [(f, v) for (f, v) in zip(self.GT_FORMAT, 
                                             (self.CALLS[sample].split(':')))] )
                 self._SAMPLE_GTS[sample] = d
+                if len(self._SAMPLE_GTS) == len(self.samples):
+                    #if we've now set self._SAMPLE_GTS for all samples set
+                    #self._got_gts to True to prevent unnecessary looping in
+                    #sample_calls() method
+                    self._got_gts = True
                 return d
             else:
                 raise ParseError("Sample {} is not in VCF" .format(sample))
 
-    def get_parsed_gt_fields(self, field, values=[]):
+    def parsed_gts(self, sample=None):
+        ''' If a sample is provided a dict of GT field names to values 
+            is given for that sample. Otherwise a dict of GT field names  
+            to dicts of sample names to values is given.
+
+            Missing values will be assigned to None.
+
+            Args:
+                sample: Optional sample name. If not None, a dict of 
+                        GT fields to values is given for the given 
+                        sample only. Default = None
+                                
+            
+            >>> g = record.parsed_gts('Sample_1')
+            >>> g
+            {'GT': '0/0', 'AD': [10, 0], 'DP': 10, 'GQ': 30}
+            >>> g = record.parsed_gts()
+            {'GT': {'Sample_1': '0/0', 'Sample_2': '0/1'},
+            'AD': {'Sample_1': [10, 0], 'Sample_2': [6, 6]},
+            'DP': {'Sample_1': 10, 'Sample_2': 12},
+            'GQ': {'Sample_1': 30, 'Sample_2': 33}}
+        '''
+    
+        d = {}
+        if sample is not None:
+            for f in self.get_sample_call(sample):
+                p = self._get_parsed_gt_fields(
+                                        f, [self.get_sample_call(sample)[f]] )
+                d[f] = p[0]
+        else:        
+            for f in self.GT_FORMAT:
+                d[f] = dict( zip(self.samples, self._get_parsed_gt_fields(f, 
+                                             (self.sample_calls()[s][f] if f in 
+                                              self.sample_calls()[s] else None 
+                                              for s in self.samples) ) ) )
+        return d
+        
+    def _get_parsed_gt_fields(self, field, values=[]):
         '''
             Retrieves values of genotype field parsed so that the 
             returned values are of the expected type (str, int or float)
@@ -402,8 +476,8 @@ class VcfRecord(object):
                     pv.append(l)
                 else:
                     pv.append(f[0](val))
-            except ValueError:
-                if val == '.':
+            except (ValueError, TypeError, AttributeError):
+                if val == '.' or val is None:
                     if f[1]:
                         pv.append([None])
                     else:
