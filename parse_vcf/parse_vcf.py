@@ -84,7 +84,8 @@ class VcfReader(object):
         doc TODO
     """
     
-    def __init__(self, filename=None, compressed=None, encoding='utf-8'):
+    def __init__(self, filename=None, compressed=None, bcf=None, 
+                 encoding='utf-8'):
         """ 
             Create a new VcfReader object
  
@@ -96,18 +97,33 @@ class VcfReader(object):
             raise ParseError('You must provide a filename')
         self.filename = filename
         self.compressed = compressed
+        self.bcf = bcf
         self.encoding = encoding
         self._tabix = None
+        if self.bcf is None:
+            self.bcf = filename.endswith(".bcf")
         if self.compressed is None:
             self.compressed = filename.endswith((".gz", ".bgz"))
-        if self.compressed:
-            self.file = gzip.open(filename, encoding=encoding, mode='rt')
+        if self.bcf:
+            if pysam is None:
+                raise ParseError("pysam not available. Please install (e.g. " + 
+                                 "via 'pip install pysam' to parse bcf files")
+            self.file = pysam.VariantFile(filename)
+            self.reader = (rec.__str__().rstrip() for rec 
+                           in self.file.fetch() if rec.__str__().rstrip())
+            head = self.file.header.__str__().split("\n")
+            head.pop()
+            cols = head.pop().split("\t")
+            self.header = VcfHeader(head, cols)
         else:
-            self.file = open(filename, encoding=encoding, mode='r')
-        self.reader = (line.rstrip() for line in self.file if line.rstrip())
+            if self.compressed:
+                self.file = gzip.open(filename, encoding=encoding, mode='rt')
+            else:
+                self.file = open(filename, encoding=encoding, mode='r')
+            self.reader = (line.rstrip() for line in self.file if line.rstrip())
+            self.header      = self._read_header()
         self._mode = os.stat(self.filename).st_mode
         #read header information
-        self.header      = self._read_header()
         #set some header values for convenience
         self.metadata    = self.header.metadata
         self.col_header  = self.header.col_header
@@ -275,7 +291,7 @@ class VcfHeader(object):
             #line is an e.g. INFO/FORMAT/FILTER/ALT/contig with multiple keys
             field = match_d.group(1)
             fid   = match_d.group(2)
-            rest  = match_d.group(3)
+            rest  = match_d.group(3) or ''
             d = dict([(x, y) for (x, y) in self._subd_re.findall(rest)])
             if not field in self.metadata:
                 self.metadata[field] = {fid : [d]}
