@@ -11,77 +11,77 @@ except ImportError:
 
 #common INFO fields and their types in case absent from header
 COMMON_INFO = {
-    '1000G' : {'Type' : 'Flag', 'Number' : 1},
-    'AA' : {'Type' : 'String', 'Number' : 1},
-    'AC' : {'Type' : 'Integer', 'Number' : 'A'},
-    'AF' : {'Type' : 'Float', 'Number' : 'A'},
-    'AN' : {'Type' : 'Integer', 'Number' : 1},
-    'BQ' : {'Type' : 'Float', 'Number' : 1},
-    'CIGAR' : {'Type' : 'String', 'Number' : 1},
-    'DB' : {'Type' : 'Flag', 'Number' : 1},
-    'DP' : {'Type' : 'Integer', 'Number' : 1},
-    'END' : {'Type' : 'Integer', 'Number' : 1},
-    'H2' : {'Type' : 'Flag', 'Number' : 1},
-    'H3' : {'Type' : 'Flag', 'Number' : 1},
-    'MQ' : {'Type' : 'Float', 'Number' : 1},
-    'MQ0' : {'Type' : 'Integer', 'Number' : 1},
-    'NS' : {'Type' : 'Integer', 'Number' : 1},
-    'SB' : {'Type' : 'String', 'Number' : 1},
-    'SOMATIC' : {'Type' : 'Flag', 'Number' : 1},
-    'VALIDATED' : {'Type' : 'Flag', 'Number' : 1},
+    '1000G':{'Type':'Flag', 'Class':None, 'Number':1, 'Split':False},
+    'AA':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'AC':{'Type':'Integer', 'Class':int, 'Number':'A', 'Split':True},
+    'AF':{'Type':'Float', 'Class':float, 'Number':'A', 'Split':True},
+    'AN':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'BQ':{'Type':'Float', 'Class':float, 'Number':1, 'Split':False},
+    'CIGAR':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'DB':{'Type':'Flag', 'Class':None, 'Number':1, 'Split':False},
+    'DP':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'END':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'H2':{'Type':'Flag', 'Class':None, 'Number':1, 'Split':False},
+    'H3':{'Type':'Flag', 'Class':None, 'Number':1, 'Split':False},
+    'MQ':{'Type':'Float', 'Class':float, 'Number':1, 'Split':False},
+    'MQ0':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'NS':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'SB':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'SOMATIC':{'Type':'Flag', 'Class':None, 'Number':1, 'Split':False},
+    'VALIDATED':{'Type':'Flag', 'Class':None, 'Number':1, 'Split':False},
     # for SVs
-    'BKPTID' : {'Type' : 'String', 'Number' : '.'},
-    'CICN' : {'Type' : 'Integer', 'Number' : 2},
-    'CICNADJ' : {'Type' : 'Integer', 'Number' : 1},
-    'CIEND' : {'Type' : 'Integer', 'Number' : 2},
-    'CILEN' : {'Type' : 'Integer', 'Number' : 2},
-    'CIPOS' : {'Type' : 'Integer', 'Number' : 2},
-    'CN' : {'Type' : 'Integer', 'Number' : 1},
-    'CNADJ' : {'Type' : 'Integer', 'Number' : '.'},
-    'DBRIPID' : {'Type' : 'String', 'Number' : 1},
-    'DBVARID' : {'Type' : 'String', 'Number' : 1},
-    'DGVID' : {'Type' : 'String', 'Number' : 1},
-    'DPADJ' : {'Type' : 'Integer', 'Number' : 1},
-    'EVENT' : {'Type' : 'String', 'Number' : 1},
-    'HOMLEN' : {'Type' : 'Integer', 'Number' : '.'},
-    'HOMSEQ' : {'Type' : 'String', 'Number' : '.'},
-    'IMPRECISE' : {'Type' : 'Flag', 'Number' : 1},
-    'MATEID' : {'Type' : 'String', 'Number' : 1},
-    'MEINFO' : {'Type' : 'String', 'Number' : 4},
-    'METRANS' : {'Type' : 'String', 'Number' : 4},
-    'NOVEL' : {'Type' : 'Flag', 'Number' : 1},
-    'PARID' : {'Type' : 'String', 'Number' : 1},
-    'SVLEN' : {'Type' : 'Integer', 'Number' : 1},
-    'SVTYPE' : {'Type' : 'String', 'Number' : 1},
+    'BKPTID':{'Type':'String', 'Class':str, 'Number':'.', 'Split':False},
+    'CICN':{'Type':'Integer', 'Class':int, 'Number':2, 'Split':True},
+    'CICNADJ':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'CIEND':{'Type':'Integer', 'Class':int, 'Number':2, 'Split':True},
+    'CILEN':{'Type':'Integer', 'Class':int, 'Number':2, 'Split':True},
+    'CIPOS':{'Type':'Integer', 'Class':int, 'Number':2, 'Split':True},
+    'CN':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'CNADJ':{'Type':'Integer', 'Class':int, 'Number':'.', 'Split':False},
+    'DBRIPID':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'DBVARID':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'DGVID':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'DPADJ':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'EVENT':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'HOMLEN':{'Type':'Integer', 'Class':int, 'Number':'.', 'Split':False},
+    'HOMSEQ':{'Type':'String', 'Class':str, 'Number':'.', 'Split':False},
+    'IMPRECISE':{'Type':'Flag', 'Class':None, 'Number':1, 'Split':False},
+    'MATEID':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'MEINFO':{'Type':'String', 'Class':str, 'Number':4, 'Split':True},
+    'METRANS':{'Type':'String', 'Class':str, 'Number':4, 'Split':True},
+    'NOVEL':{'Type':'Flag', 'Class':None, 'Number':1, 'Split':False},
+    'PARID':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'SVLEN':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'SVTYPE':{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
 }
 
 #common genotype FORMAT Fields and their types in case absent from header
 COMMON_FORMAT = {
-    'DP'  : {'Type' : 'Integer', 'Number' : 1},
-    'EC'  : {'Type' : 'Integer', 'Number' : 'A'},
-    'FT'  : {'Type' : 'String', 'Number' : 1},
-    'GL'  : {'Type' : 'Float', 'Number' : 'G'},
-    'GLE' : {'Type' : 'String', 'Number' : '.'},
-    'GP'  : {'Type' : 'Float', 'Number' : 'G'},
-    'GQ'  : {'Type' : 'Integer', 'Number' : 1},
-    'GT'  : {'Type' : 'String', 'Number' : 1},
-    'HQ'  : {'Type' : 'Integer', 'Number' : 2},
-    'MQ'  : {'Type' : 'Integer', 'Number' : 1},
-    'PL'  : {'Type' : 'Integer', 'Number' : 1},
-    'PQ'  : {'Type' : 'Integer', 'Number' : 1},
-    'PS'  : {'Type' : 'Integer', 'Number' : 1},
+    'DP' :{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'EC' :{'Type':'Integer', 'Class':int, 'Number':'A', 'Split':True},
+    'FT' :{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'GL' :{'Type':'Float', 'Class':float, 'Number':'G', 'Split':True},
+    'GLE':{'Type':'String', 'Class':str, 'Number':'.', 'Split':False},
+    'GP' :{'Type':'Float', 'Class':float, 'Number':'G', 'Split':True},
+    'GQ' :{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'GT' :{'Type':'String', 'Class':str, 'Number':1, 'Split':False},
+    'HQ' :{'Type':'Integer', 'Class':int, 'Number':2, 'Split':True},
+    'MQ' :{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'PL' :{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'PQ' :{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'PS' :{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
     # for SVs
-    'CN' : {'Type' : 'Integer', 'Number' : 1},
-    'CNQ' : {'Type' : 'Float', 'Number' : 1},
-    'CNL' : {'Type' : 'Float', 'Number' : '.'},
-    'NQ' : {'Type' : 'Integer', 'Number' : 1},
-    'HAP' : {'Type' : 'Integer', 'Number' : 1},
-    'AHAP' : {'Type' : 'Integer', 'Number' : 1}
+    'CN':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'CNQ':{'Type':'Float', 'Class':float, 'Number':1, 'Split':False},
+    'CNL':{'Type':'Float', 'Class':float, 'Number':'.', 'Split':False},
+    'NQ':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'HAP':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
+    'AHAP':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False}
 }
 
 class VcfReader(object):
     """ 
-        doc TODO
+        doc TODO - individual methods documentation available
     """
     
     def __init__(self, filename=None, compressed=None, bcf=None, 
@@ -91,6 +91,20 @@ class VcfReader(object):
  
             Opens the given VCF file and stores the metaheader and 
             sample information
+
+            Args:
+                filename:   VCF file to open. Required.
+                
+                compressed: Boolean indicating whether input should be treated 
+                            as bgzip compressed data. If not provided, this 
+                            will be inferred from the file extension.
+
+                bcf:        Boolean indicating whether the input is from a BCF 
+                            file. If not provided, this will be inferred from 
+                            the file extension.
+
+                encoding:   Encoding of input data. Default = 'utf-8'.
+
         """
         
         if not filename :
@@ -127,8 +141,6 @@ class VcfReader(object):
         #set some header values for convenience
         self.metadata    = self.header.metadata
         self.col_header  = self.header.col_header
-        self.samples     = self.header.samples 
-        self.sample_cols = self.header.sample_cols
         self.parser      = (VcfRecord(line, self,) for line in self.reader)
         self.var         = None
         
@@ -173,11 +185,16 @@ class VcfReader(object):
                        Default = None
 
             >>> v = VcfReader(my_vcf)
-            >>> v.set_region('chr1')
-            >>> v.set_region(chrom='chr1', start=999999 end=1000000)
-            >>> v.set_region('chr1:1000000-1000000')
+            >>> v.set_region('chr1') #get all variants on chr1
             >>> for record in v.parser:
             ... #do something with each record
+
+            Because start coordinates are 0-based, to retrieve a variant
+            at (or overlapping) chr1:1000000 the two examples below are
+            equivalent:
+
+            >>> v.set_region(chrom='chr1', start=999999 end=1000000)
+            >>> v.set_region('chr1:1000000-1000000')
 
         """
         if not S_ISREG(self._mode):
@@ -257,6 +274,8 @@ class VcfHeader(object):
                 raise HeaderError('Invalid column name. Expected {}, got {}'
                                   .format('FORMAT', self.col_header[8]))
         self.metadata = {}
+        self._info_field_translater = {}
+        self._format_field_translater = {}
         self._parse_metadata()
 
 
@@ -275,6 +294,10 @@ class VcfHeader(object):
             self.fileformat = ff_match.group(2)
         for h in self.meta_header:
             self._parse_header_line(h)
+
+        for field_type in ['FORMAT', 'INFO']:
+            for field in self.metadata[field_type]:
+                self._set_field_translation(field_type, field)
 
     def _parse_header_line(self, h):
         ''' 
@@ -318,6 +341,40 @@ class VcfHeader(object):
                     raise HeaderError(
                             "Missing required key '{}' in metaheader line: {}" 
                             .format(k, h))
+
+    def _set_field_translation(self, field_type, field):
+        '''
+            returns a tuple of variable class type (int, float or str)
+            and whether the value requires splitting
+        '''
+
+        f = self.metadata[field_type][field][0]
+        ctype = None
+        if f['Type'] == 'String' or f['Type'] == 'Character':
+            ctype = str
+        elif f['Type'] == 'Float':
+            ctype = float
+        elif f['Type'] == 'Integer':
+            ctype = int
+        elif f['Type'] != 'Flag':
+            raise ParseError("Unrecognised FORMAT Type '{}' in header" 
+                             .format(f['Type']))
+        split = False
+        try:
+            if int(f['Number']) > 1:
+                split = True
+        except ValueError:
+            split = True
+        if field_type == 'INFO':
+            setter = self._info_field_translater    
+        elif field_type == 'FORMAT':
+            setter = self._format_field_translater
+        else:
+            raise ParseError("'{}' not recognised as a ".format(field_type) +
+                             "field type for translation")
+        setter[field] = (ctype, split)
+
+
                 
 
 class VcfRecord(object):
@@ -326,10 +383,10 @@ class VcfRecord(object):
         from a VCF file. May contain multiple alternate alleles.
     '''
 
-    __slots__ = ['cols', '_metadata', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 
-                 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'samples', '_sample_idx',  
-                 '__CALLS', '__ALLELES', 'GT_FORMAT', '_SAMPLE_GTS', '_got_gts'
-                ]
+    __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
+                 'FILTER', 'INFO', 'FORMAT', 'samples', '_sample_idx',  
+                 '__CALLS', '__ALLELES', 'GT_FORMAT', '_SAMPLE_GTS', 
+                 '_got_gts', ]
 
     def __init__(self, line, caller):
         ''' VcfRecord objects require a line and a related VcfReader 
@@ -356,9 +413,7 @@ class VcfRecord(object):
         self.GT_FORMAT   = None
         self.CALLS       = None
         self.ALLELES     = None
-        self.samples     = caller.samples    #should maintain order from header
-        self._sample_idx = caller.sample_cols 
-        self._metadata   = caller.metadata
+        self.header      = caller.header
         self._SAMPLE_GTS = {}
         self._got_gts    = False         #flag indicating whether we've already 
                                          #retrieved GT dicts for every sample
@@ -400,11 +455,11 @@ class VcfRecord(object):
         '''
 
         if self.__CALLS is None:
-            if self._sample_idx:
+            if self.header.sample_cols:
                 calls = self.cols.pop()
                 self.cols.extend(calls.split("\t"))
-                self.__CALLS = dict([(s, self.cols[self._sample_idx[s]]) 
-                                      for s in self.samples]) 
+                self.__CALLS = dict([(s, self.cols[self.header.sample_cols[s]]) 
+                                      for s in self.header.samples]) 
             else:
                 self.__CALLS = {}
         return self.__CALLS
@@ -426,11 +481,13 @@ class VcfRecord(object):
 
             >>> d = record.sample_calls()
             >>> s1 = d['Sample_1']
-            >>> gq = s1['GQ']
-
+            >>> s1['GQ']
+            '30'
+            
             ...or more concisely:
 
-            >>> gq = record.sample_calls()['Sample_1']['GQ']
+            >>> record.sample_calls()['Sample_1']['GQ']
+            '30'
         '''
 
         if self._got_gts:
@@ -439,7 +496,7 @@ class VcfRecord(object):
             self._got_gts = True
             #get_sample_call() sets self._SAMPLE_GTS[s] for future use
             return dict([(s, self.get_sample_call(s)) 
-                          for s in self.samples ]) 
+                          for s in self.header.samples ]) 
 
 
 
@@ -456,7 +513,7 @@ class VcfRecord(object):
             
             All values returned are strings. For values cast to an 
             appropriate type (int/float/string/list) use the 
-            'parsed_gts(sample)' function.
+            'parsed_gts(sample=[sample])' function.
            
             Args:
                 sample: name of the sample to retrieve (as it appears 
@@ -466,7 +523,8 @@ class VcfRecord(object):
                 >>> s1 = record.get_sample_call('Sample_1')
                 >>> s1
                 {'GT': '0/0', 'AD': '10,0', 'DP': '10', 'GQ': '30'}
-                >>> gq = s1['GQ']
+                >>> s1['GQ']
+                '30'
         '''
 
         try:
@@ -476,7 +534,7 @@ class VcfRecord(object):
                 d = dict( [(f, v) for (f, v) in zip(self.GT_FORMAT, 
                                             (self.CALLS[sample].split(':')))] )
                 self._SAMPLE_GTS[sample] = d
-                if len(self._SAMPLE_GTS) == len(self.samples):
+                if len(self._SAMPLE_GTS) == len(self.header.samples):
                     #if we've now set self._SAMPLE_GTS for all samples set
                     #self._got_gts to True to prevent unnecessary looping in
                     #sample_calls() method
@@ -485,44 +543,59 @@ class VcfRecord(object):
             else:
                 raise ParseError("Sample {} is not in VCF" .format(sample))
 
-    def parsed_gts(self, sample=None):
-        ''' If a sample is provided a dict of GT field names to values 
-            is given for that sample. Otherwise a dict of GT field names  
-            to dicts of sample names to values is given.
+    def parsed_gts(self, samples=None, fields=None):
+        ''' Returns a dict of GT field names to dicts of sample names 
+            to values. By default, values for all samples and fields 
+            will be retrieved, but a list of sample IDs and a list of 
+            FORMAT fields to retrieve can be given.
 
             Missing values will be assigned to None.
 
             Args:
-                sample: Optional sample name. If not None, a dict of 
-                        GT fields to values is given for the given 
-                        sample only. Default = None
+                samples: Optional list of sample names to retrieve 
+                         values for. Default = None (values retrieved 
+                         for all samples)
+                                
+                fields:  Optional list of field names (as they appear 
+                         in the FORMAT field of the record) to retrieve 
+                         values for. Default = None (values retrieved 
+                         for all fields)
                                 
             
-            >>> g = record.parsed_gts('Sample_1')
-            >>> g
-            {'GT': '0/0', 'AD': [10, 0], 'DP': 10, 'GQ': 30}
-            >>> g = record.parsed_gts()
+            >>> record.parsed_gts()
             {'GT': {'Sample_1': '0/0', 'Sample_2': '0/1'},
             'AD': {'Sample_1': [10, 0], 'Sample_2': [6, 6]},
             'DP': {'Sample_1': 10, 'Sample_2': 12},
             'GQ': {'Sample_1': 30, 'Sample_2': 33}}
+            
+            >>> record.parsed_gts(samples=['Sample_2'])
+            {'GT': {'Sample_2': '0/1'}, 'AD': {'Sample_2': [6, 6]},
+            'DP': {'Sample_2': 12}, 'GQ': {'Sample_2': 33}}
+
+            >>>  record.parsed_gts(fields=['GT', 'GQ'])
+            {'GT': {'Sample_1': '0/0', 'Sample_2': '0/1'},
+            'GQ': {'Sample_1': 30, 'Sample_2': 33}}
+
         '''
     
         d = {}
-        if sample is not None:
-            for f in self.get_sample_call(sample):
-                p = self._get_parsed_gt_fields(
-                                        f, [self.get_sample_call(sample)[f]] )
-                d[f] = p[0]
-        else:        
-            for f in self.GT_FORMAT:
-                d[f] = dict( zip(self.samples, self._get_parsed_gt_fields(f, 
-                                             (self.sample_calls()[s][f] if f in 
-                                              self.sample_calls()[s] else None 
-                                              for s in self.samples) ) ) )
+        if fields is not None:
+            f_list = fields
+        else:
+            f_list = self.GT_FORMAT
+        if samples is not None:
+            s_list = samples
+        else:
+            s_list = self.header.samples
+        for f in f_list:
+            d[f] = dict(zip(s_list, self._get_parsed_gt_fields(f,
+                        (self.sample_calls()[s][f] if f in 
+                        self.sample_calls()[s] else None 
+                        for s in s_list) ) ) )
         return d
         
     def _get_parsed_gt_fields(self, field, values=[]):
+        #TODO - make this more efficient with a cython extension
         '''
             Retrieves values of genotype field parsed so that the 
             returned values are of the expected type (str, int or float)
@@ -538,14 +611,24 @@ class VcfRecord(object):
                 values: list of values from a genotype field
         '''
         
-        f = self._get_field_translation('FORMAT', field)
+        try:
+            f = self.header._format_field_translater[field]
+        except KeyError:
+            try:
+                f = (COMMON_FORMAT[field]['Class'], 
+                     COMMON_FORMAT[field]['Split'])
+                self.header._format_field_translater[field] = f
+            except KeyError:
+                raise ParseError("Unrecognised FORMAT field '{}'".format(field) 
+                                 + "at {}:{}. ".format(self.CHROM, self.POS) + 
+                                 "Non-standard  FORMAT fields should be " + 
+                                 "represented in VCF header.")
         #f[0] is the class type of field, f[1] = True if values should be split
         pv = []
         for val in values:
             try: 
                 if f[1]:
-                    l = list(f[0](s) for s in val.split(','))
-                    pv.append(l)
+                    pv.append(list(map(f[0], val.split(','))))
                 else:
                     pv.append(f[0](val))
             except (ValueError, TypeError, AttributeError):
@@ -559,43 +642,8 @@ class VcfRecord(object):
                                      "{} ".format(field) + "FORMAT field at " +
                                      " {}:{}" .format(self.CHROM, self.POS))
         return pv
-
-    def _get_field_translation(self, field_type, field):
-        '''
-            returns a tuple of variable class type (int, float or str)
-            and whether the value requires splitting
-        '''
-
-        try:
-            f = self._metadata[field_type][field][0]
-        except KeyError:
-            try:
-                f = COMMON_FORMAT[field]
-            except KeyError:
-                raise ParseError("Unrecognised FORMAT field '{}'"
-                                 .format(field) + "at {}:{}. " 
-                                 .format(self.CHROM, self.POS) + 
-                                 "Non-standard  FORMAT fields should be " + 
-                                 "represented in VCF header.")
-        ctype = None
-        if f['Type'] == 'String' or f['Type'] == 'Character':
-            ctype = str
-        elif f['Type'] == 'Float':
-            ctype = float
-        elif f['Type'] == 'Integer':
-            ctype = int
-        else:
-            raise ParseError("Unrecognised FORMAT Type '{}' at {}:{}" 
-                             .format(f['Type'], self.CHROM, self.POS))
-        split = False
-        try:
-            if int(f['Number']) > 1:
-                split = True
-        except ValueError:
-            split = True
-        return (ctype, split)
-
-
+            
+    
 class HeaderError(Exception):
     pass
 
