@@ -448,7 +448,7 @@ class VcfRecord(object):
             self.__INFO_FIELDS = {}
             for i in self.INFO.split(';'):
                 try:
-                    (f, v) = i.split('=')
+                    (f, v) = i.split('=', 1)
                 except ValueError:
                     (f, v) = (i, None)
                 self.__INFO_FIELDS[f] = v
@@ -458,7 +458,7 @@ class VcfRecord(object):
     def INFO_FIELDS(self, i):
         self.__INFO_FIELDS = i
 
-    def parsed_info_fields(self, fields=[]):
+    def parsed_info_fields(self, fields=None):
         if fields is not None:
             f_list = fields
         else:
