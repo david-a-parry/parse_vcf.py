@@ -385,8 +385,8 @@ class VcfRecord(object):
 
     __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
                  'FILTER', 'INFO', 'FORMAT', 'samples', '_sample_idx',  
-                 '__CALLS', '__ALLELES', 'GT_FORMAT', '_SAMPLE_GTS', 
-                 '_got_gts', ]
+                 '__CALLS', '__ALLELES', '__INFO_FIELDS',  'GT_FORMAT',  
+                '_SAMPLE_GTS', '_got_gts', ]
 
     def __init__(self, line, caller):
         ''' VcfRecord objects require a line and a related VcfReader 
@@ -409,13 +409,14 @@ class VcfRecord(object):
 
         ( self.CHROM, self.POS, self.ID, self.REF, self.ALT,  
           self.QUAL, self.FILTER, self.INFO ) = self.cols[:8] 
-        self.FORMAT      = None
-        self.GT_FORMAT   = None
-        self.CALLS       = None
-        self.ALLELES     = None
-        self.header      = caller.header
-        self._SAMPLE_GTS = {}
-        self._got_gts    = False         #flag indicating whether we've already 
+        self.INFO_FIELDS   = None
+        self.FORMAT        = None
+        self.GT_FORMAT     = None
+        self.CALLS         = None
+        self.ALLELES       = None
+        self.header        = caller.header
+        self._SAMPLE_GTS   = {}
+        self._got_gts      = False       #flag indicating whether we've already 
                                          #retrieved GT dicts for every sample
 
         if len(self.cols) > 8:
@@ -433,6 +434,67 @@ class VcfRecord(object):
     @ALLELES.setter
     def ALLELES(self, alleles):
         self.__ALLELES = alleles
+
+    @property 
+    def INFO_FIELDS(self):
+        ''' 
+        A dict of INFO field names to values. All returned values are Strings 
+        except for Flags which are assigned None.
+
+        To obtain values parsed into the appropriate Type as defined by the 
+        VCF header, use the 'parsed_info_fields()' method.
+        '''
+        if self.__INFO_FIELDS is None:
+            self.__INFO_FIELDS = {}
+            for i in self.INFO.split(';'):
+                try:
+                    (f, v) = i.split('=')
+                except ValueError:
+                    (f, v) = (i, None)
+                self.__INFO_FIELDS[f] = v
+        return self.__INFO_FIELDS
+
+    @INFO_FIELDS.setter
+    def INFO_FIELDS(self, i):
+        self.__INFO_FIELDS = i
+
+    def parsed_info_fields(self, fields=[]):
+        if fields is not None:
+            f_list = fields
+        else:
+            f_list = list(self.INFO_FIELDS)
+        d = dict( (f, self._get_parsed_info_value(f, self.INFO_FIELDS[f])) 
+                                                               for f in f_list)
+        return d
+            
+    def _get_parsed_info_value(self, field, value):
+        try:
+            f = self.header._info_field_translater[field]
+        except KeyError:
+            try:
+                f = (COMMON_INFO[field]['Class'], 
+                     COMMON_INFO[field]['Split'])
+                self.header._info_field_translater[field] = f
+            except KeyError:
+                raise ParseError("Unrecognised INFO field '{}'".format(field) 
+                                 + "at {}:{}. ".format(self.CHROM, self.POS) + 
+                                 "Non-standard  INFO fields should be " + 
+                                 "represented in VCF header.")
+        #f[0] is the class type of field, f[1] = True if values should be split
+        try: 
+            if (f[1]):
+                pv = list(map(f[0], value.split(',')))
+            else:
+                pv = f[0](value)
+        except (ValueError, TypeError, AttributeError):
+            if value == '.' or value is None:
+                pv = None
+            else:
+                raise ParseError("Unexpected value type for " +
+                                 "{} ".format(field) + "FORMAT field at " +
+                                 " {}:{}" .format(self.CHROM, self.POS))
+        return pv
+            
 
     @property
     def CALLS(self):
