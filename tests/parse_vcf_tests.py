@@ -31,9 +31,9 @@ def test_read_header():
 
 def test_samples():
     v = VcfReader("tests/data/test1.bcf")
-    assert_equal(len(v.samples), 238)
+    assert_equal(len(v.header.samples), 238)
     for i in range(1, 239):
         sample = "Sample_" + str(i)
-        assert_equal(v.sample_cols[sample], 8 + i)
+        assert_equal(v.header.sample_cols[sample], 8 + i)
 
 
