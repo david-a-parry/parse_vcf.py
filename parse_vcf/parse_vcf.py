@@ -232,7 +232,8 @@ class VcfReader(object):
 class VcfHeader(object):
     ''' Header class storing metadata and sample information for a vcf '''
     
-    _meta_re = re.compile(r"""\#\#(\S+?)=(.*)""")#should capture any metadata
+    _meta_re = re.compile(r"""\#\#(\S+?)=(.*)""")  #should capture any metadata
+
     _dict_re = re.compile(r"""                 #for capturing dict-key metadata
                           \#\#(\S+)            #captures field name (e.g. INFO)
                           =<ID=(\S+?)          #captures metadata ID
@@ -246,6 +247,10 @@ class VcfHeader(object):
                                                #else should be all non-comma 
                                                #and non-whitespace chars
                          """, re.X)
+
+    _csq_format_re = re.compile(r'''.*Format:\s*((\S+\|)*\S+)"''')
+    #for capturing CSQ format in Description field of metaheader
+
     _required_keys = { 'INFO'   : ["Number", "Type", "Description"],
                        'FORMAT' : ["Number", "Type", "Description"],
                        'FILTER' : ["Description"],
@@ -256,6 +261,10 @@ class VcfHeader(object):
         ''' Requires a list of metaheader lines and a list of column
             names
         '''
+
+        __slots__ = ['meta_header', 'col_header', 'samples', 'sample_cols',
+                     'metadata', 'fileformat', '__csq_label', '__csq_fields', 
+                     '_info_field_translater', '_format_field_translater'] 
 
         self.meta_header = meta_header
         self.col_header  = col_header
@@ -274,10 +283,60 @@ class VcfHeader(object):
                 raise HeaderError('Invalid column name. Expected {}, got {}'
                                   .format('FORMAT', self.col_header[8]))
         self.metadata = {}
+        self.csq_label = None
+        self.csq_fields = None
         self._info_field_translater = {}
         self._format_field_translater = {}
         self._parse_metadata()
 
+    @property
+    def csq_label(self):
+        ''' 
+            String labelling the INFO field label of VEP consequence 
+            annotations. Will raise a HeaderError if access is attempted 
+            but no VEP CSQ or ANN field is present in the header.
+        '''
+        if self.__csq_label is None:
+            self.csq_fields
+        return self.__csq_label
+
+    @csq_label.setter
+    def csq_label(self, c):
+        self.__csq_label = c
+
+    @property
+    def csq_fields(self):
+        ''' 
+            A list of CSQ field names in the order they are represented
+            in CSQ INFO field entries. Set to None on initialization. 
+            Will raise a HeaderError if access is attempted but no VEP 
+            CSQ or ANN field is present in the header.
+        '''
+
+        if self.__csq_fields is None:
+            try:
+                csq_header = self.metadata['INFO']['CSQ'][-1]
+                csq = 'CSQ'
+            except KeyError:
+                try:
+                    csq_header = self.metadata['INFO']['ANN'][-1]
+                    csq = 'ANN'
+                except KeyError:
+                    raise HeaderError("No CSQ or ANN field in INFO header - "+
+                                      "unable to retrieve consequence fields.")
+            self.csq_label = csq
+            match = self._csq_format_re.match(csq_header['Description'])
+            if match:
+                self.__csq_fields = match.group(1).split('|')
+            else:
+                raise HeaderError("Could not parse {} Format in ".format(csq)
+                                + "header. Unable to retrieve consequence "
+                                + "annotations.")
+        return self.__csq_fields
+    
+    @csq_fields.setter
+    def csq_fields(self, csq):
+        self.__csq_fields = csq
 
     def _parse_metadata(self):
         ''' 
@@ -384,7 +443,7 @@ class VcfRecord(object):
     '''
 
     __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
-                 'FILTER', 'INFO', 'FORMAT', 'samples', '_sample_idx',  
+                 'FILTER', 'INFO', 'FORMAT', '__CSQ', 'samples', '_sample_idx',  
                  '__CALLS', '__ALLELES', '__INFO_FIELDS',  'GT_FORMAT',  
                 '_SAMPLE_GTS', '_got_gts', ]
 
@@ -415,6 +474,7 @@ class VcfRecord(object):
         self.CALLS         = None
         self.ALLELES       = None
         self.header        = caller.header
+        self.CSQ           = None
         self._SAMPLE_GTS   = {}
         self._got_gts      = False       #flag indicating whether we've already 
                                          #retrieved GT dicts for every sample
@@ -495,7 +555,6 @@ class VcfRecord(object):
                                  " {}:{}" .format(self.CHROM, self.POS))
         return pv
             
-
     @property
     def CALLS(self):
         '''
@@ -705,6 +764,45 @@ class VcfRecord(object):
                                      " {}:{}" .format(self.CHROM, self.POS))
         return pv
             
+    @property
+    def CSQ(self):
+        ''' 
+            A list of dicts of CSQ/ANN annotations from VEP to values.
+            Empty values are represented by empty Strings. Will raise 
+            a HeaderError if the associated VCF header does not contain
+            CSQ/ANN information and a ParseError if the record being 
+            parsed does not contain a CSQ/ANN annotation in the INFO 
+            field.
+        '''
+        if self.__CSQ is None:
+            lbl = self.header.csq_label
+            try:
+                csqs = self.INFO_FIELDS[lbl].split(',')
+            except KeyError:
+                raise ParseError("Could not find '{}' label in ".format(lbl) +
+                                 "INFO field of record at {}:{}"
+                                 .format(self.CHROM, self.POS))
+            self.__CSQ = []
+            alleleToNum = {}
+            for c in csqs:
+                d = dict([(k,v) for (k, v) in zip(self.header.csq_fields, 
+                                                              c.split('|'))]) )
+                if 'ALLELE_NUM' in d:
+                    d[alt_index] = d['ALLELE_NUM']
+                else:
+                    d[alt_index] = self._vepToAlt(d['Allele'])
+                self.__CSQ.append(d)
+                
+                
+        return self.__CSQ
+
+    @CSQ.setter
+    def CSQ(self, c):
+        self.__CSQ = c
+        
+    def _vepToAlt(self, allele):
+        pass #TODO
+        #run _altToVep and pick appropriate allele from there
     
 class HeaderError(Exception):
     pass
