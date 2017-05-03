@@ -355,8 +355,11 @@ class VcfHeader(object):
             self._parse_header_line(h)
 
         for field_type in ['FORMAT', 'INFO']:
-            for field in self.metadata[field_type]:
-                self._set_field_translation(field_type, field)
+            try:
+                for field in self.metadata[field_type]:
+                    self._set_field_translation(field_type, field)
+            except KeyError:
+                warnings.warn("No '{}' field in header!".format(field_type))
 
     def _parse_header_line(self, h):
         ''' 
@@ -828,7 +831,7 @@ class VcfRecord(object):
                     elif sv_type == 'DEL':
                         self._vep_allele['deletion'] = i
                     else:
-                        self._vep_allele[i] = sv_type #should catch CNVs
+                        self._vep_allele[sv_type] = i #should catch CNVs
                 else:
                     if len(alt) == 1 and len(ref) == 1:
                         is_snv = True
