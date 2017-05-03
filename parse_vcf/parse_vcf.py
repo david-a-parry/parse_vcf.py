@@ -442,10 +442,12 @@ class VcfRecord(object):
         from a VCF file. May contain multiple alternate alleles.
     '''
 
+    _svalt_re = re.compile(r'''<(\w+)(:\w+)*>''') #group 1 gives SV type
+
     __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
                  'FILTER', 'INFO', 'FORMAT', '__CSQ', 'samples', '_sample_idx',  
                  '__CALLS', '__ALLELES', '__INFO_FIELDS',  'GT_FORMAT',  
-                '_SAMPLE_GTS', '_got_gts', ]
+                '_SAMPLE_GTS', '_got_gts', '_vep_allele', ]
 
     def __init__(self, line, caller):
         ''' VcfRecord objects require a line and a related VcfReader 
@@ -476,6 +478,7 @@ class VcfRecord(object):
         self.header        = caller.header
         self.CSQ           = None
         self._SAMPLE_GTS   = {}
+        self._vep_allele   = {}
         self._got_gts      = False       #flag indicating whether we've already 
                                          #retrieved GT dicts for every sample
 
@@ -786,11 +789,11 @@ class VcfRecord(object):
             alleleToNum = {}
             for c in csqs:
                 d = dict([(k,v) for (k, v) in zip(self.header.csq_fields, 
-                                                              c.split('|'))]) )
+                                                              c.split('|'))]) 
                 if 'ALLELE_NUM' in d:
-                    d[alt_index] = d['ALLELE_NUM']
+                    d['alt_index'] = d['ALLELE_NUM']
                 else:
-                    d[alt_index] = self._vepToAlt(d['Allele'])
+                    d['alt_index'] = self._vepToAlt(d['Allele'])
                 self.__CSQ.append(d)
                 
                 
@@ -801,9 +804,73 @@ class VcfRecord(object):
         self.__CSQ = c
         
     def _vepToAlt(self, allele):
-        pass #TODO
-        #run _altToVep and pick appropriate allele from there
-    
+        #figure out how alleles will be handled by looking at the REF vs ALTs
+        if self._vep_allele:
+            return self._vep_allele[allele]
+        is_sv = False
+        is_snv = False
+        is_indel = False
+        is_mnv = False
+        ref = self.ALLELES[0]
+        for i in range(1, len(self.ALLELES)):
+            alt = self.ALLELES[i]
+            if alt == '*':
+                self._vep_allele[alt] = i
+            else:
+                matches_sv = self._svalt_re.match(alt)
+                if matches_sv:
+                    is_sv = True
+                    sv_type = matches_sv.group(1)
+                    if sv_type == 'DUP':
+                        self._vep_allele['duplication'] = i
+                    elif sv_type == 'INS':
+                        self._vep_allele['insertion'] = i
+                    elif sv_type == 'DEL':
+                        self._vep_allele['deletion'] = i
+                    else:
+                        self._vep_allele[i] = sv_type #should catch CNVs
+                else:
+                    if len(alt) == 1 and len(ref) == 1:
+                        is_snv = True
+                    elif len(alt) == len(ref):
+                        is_mnv = True
+                    else:
+                        is_indel = True
+                    self._vep_allele[alt] = i
+                
+        if is_sv:
+            #no more editing required as long as 
+            #not at the same site as short variant
+            if is_snv or is_mnv or is_indel:
+                raise ParseError("Unable to parse structural variants at the "
+                               + "same site as a non-structural variant")
+        else:
+            #if is_snv or (is_mnv and not is_indel):
+                #do nothing - VEP does not trim alleles in this situation
+            if not is_snv and is_indel:
+                #VEP trims first base unless REF and ALT differ at first base
+                first_base_differs = False
+                ref_start = ref[:1]
+                for alt in self.ALLELES[1:]:
+                    if alt != '*':
+                        alt_start = alt[:1]
+                        if alt_start != ref_start:
+                            first_base_differs = True 
+                            break
+                if not first_base_differs:
+                    #no trimming if first base differs for any ALT, 
+                    #otherwise first base is trimmed
+                    for alt in self._vep_allele[alt]:
+                        if alt != '*':
+                            i = self._vep_allele.pop(alt)
+                            if len(alt) > 1:
+                                alt = alt[1:]
+                            else:
+                                alt = '-'
+                            self._vep_allele[alt] = i
+        return self._vep_allele[allele]
+
+
 class HeaderError(Exception):
     pass
 
