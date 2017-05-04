@@ -422,10 +422,10 @@ class VcfHeader(object):
             raise ParseError("Unrecognised FORMAT Type '{}' in header" 
                              .format(f['Type']))
         split = False
-        try:
+        if f['Number'].isdigit():
             if int(f['Number']) > 1:
                 split = True
-        except ValueError:
+        else:              #if not digit should be 'A', 'G', 'R' or '.' - split
             split = True
         if field_type == 'INFO':
             setter = self._info_field_translater    
@@ -677,6 +677,13 @@ class VcfRecord(object):
             FORMAT fields to retrieve can be given.
 
             Missing values will be assigned to None.
+    
+            Because this is a relatively costly function, you are 
+            advised to avoid calling this repeatedly for a single 
+            record - you may speed things up by only calling for a 
+            subset of samples and fields but in any case you probably 
+            want to call this function once only per record, storing 
+            the results in a variable.
 
             Args:
                 samples: Optional list of sample names to retrieve 
@@ -753,23 +760,25 @@ class VcfRecord(object):
         #f[0] is the class type of field, f[1] = True if values should be split
         pv = []
         for val in values:
-            try: 
+            try:
                 if f[1]:
                     pv.append(list(map(f[0], val.split(','))))
                 else:
                     pv.append(f[0](val))
-            except (ValueError, TypeError, AttributeError):
-                if val == '.' or val is None:
+            except (ValueError, TypeError, AttributeError) as err:
+                if val is None or val == '.':
                     if f[1]:
                         pv.append([None])
                     else:
                         pv.append(None)
                 else:
-                    raise ParseError("Unexpected value type for " +
-                                     "{} ".format(field) + "FORMAT field at " +
-                                     " {}:{}" .format(self.CHROM, self.POS))
+                    raise err
+                    raise ParseError("Unexpected value ('{}') ".format(val) 
+                                    +"for {} " .format(field) + "FORMAT field "  
+                                    +"at {}:{}" .format(self.CHROM, self.POS))
         return pv
-            
+
+
     @property
     def CSQ(self):
         ''' 
@@ -863,14 +872,20 @@ class VcfRecord(object):
                 if not first_base_differs:
                     #no trimming if first base differs for any ALT, 
                     #otherwise first base is trimmed
-                    for alt in self._vep_allele[alt]:
+                    trimmed = {}
+                    pop = []
+                    for alt in self._vep_allele:
                         if alt != '*':
-                            i = self._vep_allele.pop(alt)
+                            i = self._vep_allele[alt]
+                            pop.append(alt)
                             if len(alt) > 1:
                                 alt = alt[1:]
                             else:
                                 alt = '-'
-                            self._vep_allele[alt] = i
+                            trimmed[alt] = i
+                    for p in pop:
+                        self._vep_allele.pop(p, None)
+                    self._vep_allele.update(trimmed)
         return self._vep_allele[allele]
 
 
