@@ -258,7 +258,8 @@ class VcfHeader(object):
                      }
 
     def __init__(self, meta_header, col_header):
-        ''' Requires a list of metaheader lines and a list of column
+        ''' 
+            Requires a list of metaheader lines and a list of column
             names
         '''
 
@@ -453,7 +454,8 @@ class VcfRecord(object):
                 '_SAMPLE_GTS', '_got_gts', '_vep_allele', ]
 
     def __init__(self, line, caller):
-        ''' VcfRecord objects require a line and a related VcfReader 
+        ''' 
+            VcfRecord objects require a line and a related VcfReader 
             object for initialization.
 
             Args:
@@ -603,7 +605,7 @@ class VcfRecord(object):
             use the 'parsed_gts' function.
             
             >>> record.sample_calls()
-            {'Sample_1': {'GT': '0/0', 'AD': '10,0', 'DP': '10', 'GQ': '30'}
+            {'Sample_1': {'GT': '0/0', 'AD': '10,0', 'DP': '10', 'GQ': '30'},
             'Sample_2': {'GT': '0/1', 'AD': '6,6', 'DP': '12', 'GQ': '33'}}
 
             >>> d = record.sample_calls()
@@ -807,8 +809,6 @@ class VcfRecord(object):
                 else:
                     d['alt_index'] = self._vepToAlt(d['Allele'])
                 self.__CSQ.append(d)
-                
-                
         return self.__CSQ
 
     @CSQ.setter
