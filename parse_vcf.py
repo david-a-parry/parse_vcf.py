@@ -256,16 +256,16 @@ class VcfHeader(object):
                        'FILTER' : ["Description"],
                        'ALT'    : ["Description"],
                      }
+    __slots__ = ['meta_header', 'col_header', 'samples', 'sample_cols',
+                 'metadata', 'fileformat', '__csq_label', '__csq_fields', 
+                 '_info_field_translater', '_format_field_translater'] 
+
 
     def __init__(self, meta_header, col_header):
         ''' 
             Requires a list of metaheader lines and a list of column
             names
         '''
-
-        __slots__ = ['meta_header', 'col_header', 'samples', 'sample_cols',
-                     'metadata', 'fileformat', '__csq_label', '__csq_fields', 
-                     '_info_field_translater', '_format_field_translater'] 
 
         self.meta_header = meta_header
         self.col_header  = col_header
@@ -450,8 +450,9 @@ class VcfRecord(object):
 
     __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
                  'FILTER', 'INFO', 'FORMAT', '__CSQ', 'samples', '_sample_idx',  
-                 '__CALLS', '__ALLELES', '__INFO_FIELDS',  'GT_FORMAT',  
-                '_SAMPLE_GTS', '_got_gts', '_vep_allele', ]
+                 '__CALLS', '__ALLELES', '__DECOMPOSED_ALLELES', 
+                 '__INFO_FIELDS',  'GT_FORMAT', '_SAMPLE_GTS', '_got_gts', 
+                 '_vep_allele', ]
 
     def __init__(self, line, caller):
         ''' 
@@ -475,16 +476,17 @@ class VcfRecord(object):
 
         ( self.CHROM, self.POS, self.ID, self.REF, self.ALT,  
           self.QUAL, self.FILTER, self.INFO ) = self.cols[:8] 
-        self.INFO_FIELDS   = None
-        self.FORMAT        = None
-        self.GT_FORMAT     = None
-        self.CALLS         = None
-        self.ALLELES       = None
-        self.header        = caller.header
-        self.CSQ           = None
-        self._SAMPLE_GTS   = {}
-        self._vep_allele   = {}
-        self._got_gts      = False       #flag indicating whether we've already 
+        self.INFO_FIELDS        = None
+        self.FORMAT             = None
+        self.GT_FORMAT          = None
+        self.CALLS              = None
+        self.DECOMPOSED_ALLELES = None
+        self.ALLELES            = None
+        self.header             = caller.header
+        self.CSQ                = None
+        self._SAMPLE_GTS        = {}
+        self._vep_allele        = {}
+        self._got_gts           = False       #flag indicating whether we've already 
                                          #retrieved GT dicts for every sample
 
         if len(self.cols) > 8:
@@ -502,6 +504,45 @@ class VcfRecord(object):
     @ALLELES.setter
     def ALLELES(self, alleles):
         self.__ALLELES = alleles
+    
+    @property
+    def DECOMPOSED_ALLELES(self):
+        ''' 
+            list of AltAllele objects, one for each ALT allele in 
+            order, after reducing them to their minimal representations
+            (i.e. by trimming redundant nucleotides).
+        '''
+
+        if self.__DECOMPOSED_ALLELES is None:
+            self._minimizeAlleles()
+        return self.__DECOMPOSED_ALLELES
+        
+    @DECOMPOSED_ALLELES.setter
+    def DECOMPOSED_ALLELES(self, alleles):
+        self.__DECOMPOSED_ALLELES = alleles
+
+    def _minimizeAlleles(self):
+        self.DECOMPOSED_ALLELES = []
+        for alt in self.ALLELES[1:]:
+            ref = self.ALLELES[0]
+            pos = self.POS
+            while len(ref) > 1 and len(alt) > 1:
+                if ref[-1] == alt[-1]:               #remove identical suffixes
+                    ref = ref[0:-1]
+                    alt = alt[0:-1]
+                else:
+                    break
+            while len(ref) > 1 and len(alt) > 1:
+                if ref[0] == alt[0]:                 #remove identical prefixes
+                    ref = ref[1:]
+                    alt = alt[1:]
+                    pos += 1
+                else:
+                    break
+            self.DECOMPOSED_ALLELES.append(AltAllele(chrom=self.CHROM, 
+                                            pos=pos, ref=ref, alt=alt))
+     
+                
 
     @property 
     def INFO_FIELDS(self):
@@ -887,6 +928,61 @@ class VcfRecord(object):
                         self._vep_allele.pop(p, None)
                     self._vep_allele.update(trimmed)
         return self._vep_allele[allele]
+
+
+class AltAllele(object):
+    '''
+        Represents basic genomic features of a single alternative 
+        allele call. Features are 'CHROM', 'POS', 'REF' and 'ALT'.
+    '''
+    
+    __slots__ = ['CHROM', 'POS', 'REF', 'ALT']
+
+    def __init__(self, record=None, allele_index=1, chrom=None, pos=None,
+                 ref=None, alt=None):
+        '''
+            Either created from a given VcfRecord and the index of the 
+            allele to be represented or from chrom, pos, ref and alt 
+            arguments.
+
+            Args:
+                record:       VcfRecord object containing the allele of     
+                              interest. Uses 'allele_index' argument to
+                              determine the allele to represent.
+
+                allele_index: index of the allele to represent (e.g. 1 
+                              for the first ALT allele, 2 for the 
+                              second or 0 for the REF allele). 
+                              Default = 1.
+
+                chrom:        chromosome/contig (required if not using 
+                              a VcfRecord for construction, ignored 
+                              otherwise).
+
+                pos:          position of ref allele (required if not 
+                              using a VcfRecord for construction, 
+                              ignored otherwise).
+
+                ref:          reference allele (required if not using a
+                              VcfRecord for construction, ignored 
+                              otherwise).
+
+                alt:          alternative allele (required if not using 
+                              a VcfRecord for construction, ignored 
+                              otherwise).
+
+        '''
+
+        if record is not None:
+            self.CHROM = record.CHROM
+            self.POS   = record.POS    
+            self.REF   = record.REF    
+            self.ALT   = record.ALT
+        else:
+            self.CHROM = chrom
+            self.POS   = pos    
+            self.REF   = ref    
+            self.ALT   = alt
 
 
 class HeaderError(Exception):
