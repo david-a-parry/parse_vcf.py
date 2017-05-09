@@ -360,7 +360,10 @@ class VcfHeader(object):
                 for field in self.metadata[field_type]:
                     self._set_field_translation(field_type, field)
             except KeyError:
-                warnings.warn("No '{}' field in header!".format(field_type))
+                if field_type == 'INFO': 
+                    #no FORMAT field in header is common - e.g. sites only VCFs
+                    warnings.warn("No '{}' field in header!" 
+                                  .format(field_type), stacklevel=5)
 
     def _parse_header_line(self, h):
         ''' 
