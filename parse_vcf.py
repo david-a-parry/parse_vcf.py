@@ -477,7 +477,10 @@ class VcfRecord(object):
         ( self.CHROM, pos, self.ID, self.REF, self.ALT,  
           qual, self.FILTER, self.INFO ) = self.cols[:8] 
         self.POS = int(pos)
-        self.QUAL = float(qual)
+        try:
+            self.QUAL = float(qual)
+        except ValueError:
+            self.QUAL = qual
         self.SPAN               = None
         self.INFO_FIELDS        = None
         self.FORMAT             = None
@@ -569,6 +572,32 @@ class VcfRecord(object):
     @INFO_FIELDS.setter
     def INFO_FIELDS(self, i):
         self.__INFO_FIELDS = i
+
+    def addInfoFields(self, info):
+        ''' 
+            Requires a dict of INFO field names to a list of values. 
+            Adds or replaces existing INFO fields in the record with 
+            the items in given dict.
+
+            Args:
+                info: a dict of INFO field names to add with values 
+                      being a list of values for the given field.
+
+        '''
+        for k,v in info.items():
+            self.INFO_FIELDS[k] = v
+        self._rewrite_info_string()
+
+    def _rewrite_info_string(self):
+        info = []
+        for f,v in self.INFO_FIELDS[f].items():
+            if isinstance(v, bool): #is Flag
+                info.append(f) 
+            else:
+                info.append(f + '=' + str(v)) 
+        self.INFO = str.join(';', info)
+                
+        
 
     def parsed_info_fields(self, fields=None):
         if fields is not None:
