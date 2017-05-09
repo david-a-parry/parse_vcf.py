@@ -36,4 +36,22 @@ def test_samples():
         sample = "Sample_" + str(i)
         assert_equal(v.header.sample_cols[sample], 8 + i)
 
+def test_read_variant():
+    vcf = VcfReader("tests/data/test1.vcf")
+    record = next(vcf.parser)
+    assert_equal(record.CHROM, '1')
+    assert_equal(record.POS , 1025535)
+    assert_equal(record.ID , 'rs113100937')
+    assert_equal(record.REF, 'C')
+    assert_equal(record.ALT, 'G')
+    assert_equal(record.QUAL, 992.83)
+    assert_equal(record.FILTER, 'PASS')
+    assert_equal(record.INFO_FIELDS['AC'], '4')
+    assert_equal(record.INFO_FIELDS['AF'], '8.439e-03')
+    f = record.parsed_info_fields(['AF', 'AC', 'AN'])
+    assert_equal(f['AC'][0], 4)
+    assert_equal(f['AF'][0], 8.439e-03)
+    assert_equal(f['AN'], 474)
+    assert_equal(record.SPAN, 1025535)
+#1       1025535 rs113100937     C       G       992.83  PASS    AC=4;AF=8.439e-03;AN=474;
 
