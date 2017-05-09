@@ -593,6 +593,8 @@ class VcfRecord(object):
         for f,v in self.INFO_FIELDS.items():
             if isinstance(v, bool): #is Flag
                 info.append(f) 
+            if isinstance(v, list): #join list values with commas
+                info.append(f + '=' + str.join(',', v)) 
             else:
                 info.append(f + '=' + str(v)) 
         self.INFO = str.join(';', info)
