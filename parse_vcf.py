@@ -499,6 +499,14 @@ class VcfRecord(object):
             self.FORMAT = self.cols[8]
             self.GT_FORMAT = self.FORMAT.split(':')
 
+    def __str__(self):
+        ''' 
+            Represent the VCF line as it should appear as a VCF record.
+            This uses the values stored in self.cols to avoid 
+            potentially needless splitting of sample calls.
+        '''
+        return str.join("\t", self.cols)
+
     @property
     def ALLELES(self):
         ''' list of REF and ALT alleles in order '''
@@ -598,6 +606,7 @@ class VcfRecord(object):
             else:
                 info.append(f + '=' + str(v)) 
         self.INFO = str.join(';', info)
+        self.cols[7] = self.INFO #also change cols so is reflected in __str__ 
                 
         
 
