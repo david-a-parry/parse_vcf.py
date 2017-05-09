@@ -589,7 +589,7 @@ class VcfRecord(object):
 
             Args:
                 info: a dict of INFO field names to add with values 
-                      being a list of values for the given field.
+                      being list of values for the given field.
 
         '''
         for k,v in info.items():
@@ -602,7 +602,7 @@ class VcfRecord(object):
             if isinstance(v, bool): #is Flag
                 info.append(f) 
             if isinstance(v, list): #join list values with commas
-                info.append(f + '=' + str.join(',', v)) 
+                info.append(f + '=' + str.join(',', str(x) for x in v)) 
             else:
                 info.append(f + '=' + str(v)) 
         self.INFO = str.join(';', info)
