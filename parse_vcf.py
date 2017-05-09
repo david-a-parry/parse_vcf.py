@@ -290,6 +290,10 @@ class VcfHeader(object):
         self._format_field_translater = {}
         self._parse_metadata()
 
+    def __str__(self):
+        return (str.join("\n", self.meta_header) + "\n" +
+                str.join("\t", self.col_header) + "\n")
+
     @property
     def csq_label(self):
         ''' 
