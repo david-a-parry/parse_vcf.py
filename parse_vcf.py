@@ -590,7 +590,7 @@ class VcfRecord(object):
 
     def _rewrite_info_string(self):
         info = []
-        for f,v in self.INFO_FIELDS[f].items():
+        for f,v in self.INFO_FIELDS.items():
             if isinstance(v, bool): #is Flag
                 info.append(f) 
             else:
