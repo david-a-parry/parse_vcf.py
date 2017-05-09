@@ -1033,9 +1033,9 @@ class AltAllele(object):
             self.REF   = ref    
             self.ALT   = alt
 
-        def __eq__(self, other):
-            return (self.CHROM == other.CHROM and self.POS == other.POS and
-                    self.REF == other.REF and self.ALT == other.ALT)
+    def __eq__(self, other):
+        return (self.CHROM == other.CHROM and self.POS == other.POS and
+                self.REF == other.REF and self.ALT == other.ALT)
 
 class HeaderError(Exception):
     pass
