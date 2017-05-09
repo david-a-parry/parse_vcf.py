@@ -449,8 +449,8 @@ class VcfRecord(object):
     _svalt_re = re.compile(r'''<(\w+)(:\w+)*>''') #group 1 gives SV type
 
     __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
-                 'FILTER', 'INFO', 'FORMAT', '__CSQ', 'samples', '_sample_idx',  
-                 '__CALLS', '__ALLELES', '__DECOMPOSED_ALLELES', 
+                 'FILTER', 'INFO', 'FORMAT', '__SPAN', '__CSQ', 'samples',  
+                 '_sample_idx', '__CALLS', '__ALLELES', '__DECOMPOSED_ALLELES', 
                  '__INFO_FIELDS',  'GT_FORMAT', '_SAMPLE_GTS', '_got_gts', 
                  '_vep_allele', ]
 
@@ -474,8 +474,11 @@ class VcfRecord(object):
                                         #splitting whole line on a VCF with
                                         #lots of columns/samples is costly
 
-        ( self.CHROM, self.POS, self.ID, self.REF, self.ALT,  
-          self.QUAL, self.FILTER, self.INFO ) = self.cols[:8] 
+        ( self.CHROM, pos, self.ID, self.REF, self.ALT,  
+          qual, self.FILTER, self.INFO ) = self.cols[:8] 
+        self.POS = int(pos)
+        self.QUAL = float(qual)
+        self.SPAN               = None
         self.INFO_FIELDS        = None
         self.FORMAT             = None
         self.GT_FORMAT          = None
@@ -528,8 +531,8 @@ class VcfRecord(object):
             pos = self.POS
             while len(ref) > 1 and len(alt) > 1:
                 if ref[-1] == alt[-1]:               #remove identical suffixes
-                    ref = ref[0:-1]
-                    alt = alt[0:-1]
+                    ref = ref[:-1]
+                    alt = alt[:-1]
                 else:
                     break
             while len(ref) > 1 and len(alt) > 1:
@@ -548,7 +551,7 @@ class VcfRecord(object):
     def INFO_FIELDS(self):
         ''' 
         A dict of INFO field names to values. All returned values are Strings 
-        except for Flags which are assigned None.
+        except for Flags which are assigned True.
 
         To obtain values parsed into the appropriate Type as defined by the 
         VCF header, use the 'parsed_info_fields()' method.
@@ -559,7 +562,7 @@ class VcfRecord(object):
                 try:
                     (f, v) = i.split('=', 1)
                 except ValueError:
-                    (f, v) = (i, None)
+                    (f, v) = (i, True)
                 self.__INFO_FIELDS[f] = v
         return self.__INFO_FIELDS
 
@@ -590,20 +593,39 @@ class VcfRecord(object):
                                  "Non-standard  INFO fields should be " + 
                                  "represented in VCF header.")
         #f[0] is the class type of field, f[1] = True if values should be split
-        try: 
-            if (f[1]):
-                pv = list(map(f[0], value.split(',')))
-            else:
-                pv = f[0](value)
-        except (ValueError, TypeError, AttributeError):
-            if value == '.' or value is None:
-                pv = None
-            else:
-                raise ParseError("Unexpected value type for " +
-                                 "{} ".format(field) + "FORMAT field at " +
-                                 " {}:{}" .format(self.CHROM, self.POS))
+        if f[0] is None: #is a Flag
+            pv = True
+        else: 
+            try: 
+                if (f[1]):
+                    pv = list(map(f[0], value.split(',')))
+                else:
+                    pv = f[0](value)
+            except (ValueError, TypeError, AttributeError):
+                if value == '.' or value is None:
+                    pv = None
+                else:
+                    raise ParseError("Unexpected value type for " +
+                                     "{} ".format(field) + "FORMAT field at " +
+                                     " {}:{}" .format(self.CHROM, self.POS))
         return pv
             
+    @property
+    def SPAN(self):
+        ''' Returns end position of a record according to END INFO 
+            field if available, or otherwise POS + len(REF) -1.
+        '''
+        if self.__SPAN == None:
+            if 'END' in self.INFO_FIELDS:
+                self.__SPAN = int(self.INFO_FIELDS['END'])
+            else:
+                self.__SPAN = self.POS + len(self.REF) - 1
+        return self.__SPAN
+
+    @SPAN.setter
+    def SPAN(self, end):
+        self.__SPAN = end
+
     @property
     def CALLS(self):
         '''
@@ -856,7 +878,7 @@ class VcfRecord(object):
     def CSQ(self, c):
         self.__CSQ = c
         
-    def _vepToAlt(self, allele):
+    def _vep_to_alt(self, allele):
         #figure out how alleles will be handled by looking at the REF vs ALTs
         if self._vep_allele:
             return self._vep_allele[allele]
@@ -898,8 +920,6 @@ class VcfRecord(object):
                 raise ParseError("Unable to parse structural variants at the "
                                + "same site as a non-structural variant")
         else:
-            #if is_snv or (is_mnv and not is_indel):
-                #do nothing - VEP does not trim alleles in this situation
             if not is_snv and is_indel:
                 #VEP trims first base unless REF and ALT differ at first base
                 first_base_differs = False
@@ -984,6 +1004,9 @@ class AltAllele(object):
             self.REF   = ref    
             self.ALT   = alt
 
+        def __eq__(self, other):
+            return (self.CHROM == other.CHROM and self.POS == other.POS and
+                    self.REF == other.REF and self.ALT == other.ALT)
 
 class HeaderError(Exception):
     pass
