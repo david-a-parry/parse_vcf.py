@@ -213,7 +213,8 @@ class VcfReader(object):
             try:
                 self.reader = self._tabix.fetch(str(chrom), start, end)
                 self.parser = (VcfRecord(line, self,) for line in self.reader)
-            except ValueError as oops:
+            except ValueError:
+                self.reader = iter([])
                 self.parser = iter([])                  #ignore missing contigs
         else:
             #easy solution - compress and index with pysam if not compressed,
