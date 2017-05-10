@@ -214,13 +214,7 @@ class VcfReader(object):
                 self.reader = self._tabix.fetch(str(chrom), start, end)
                 self.parser = (VcfRecord(line, self,) for line in self.reader)
             except ValueError as oops:
-                contig = str(chrom).split(':')[0] #chrom could be a region or 
-                                                  #just an int
-                if contig not in self._tabix.contigs:
-                    warnings.warn("Contig '{}' not found in VCF '{}'" 
-                                  .format(contig, self.filename))
-                else:
-                    raise oops
+                self.parser = iter([])                  #ignore missing contigs
         else:
             #easy solution - compress and index with pysam if not compressed,
             #but will be slow...
