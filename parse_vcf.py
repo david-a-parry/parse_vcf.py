@@ -514,6 +514,29 @@ class VcfRecord(object):
         '''
         return str.join("\t", self.cols)
 
+    def add_ids(self, ids, replace=False):
+        '''
+            Adds given IDs to the ID field of the VCF record. If the 
+            record already has an ID (i.e. is not '.') these IDs are 
+            appended to the existing value(s) unless the replace 
+            argument is True.
+        
+            Args:
+                ids:     A list of IDs to add.
+
+                replace: If True, existing ID values are replaced, 
+                         otherwise the given IDs are appended to. 
+                         Default = False.
+
+        '''
+        if replace or self.ID == '.':
+            self.ID = str.join(';', ids)
+        else:
+            self.ID += str.join(';', ids)
+        self.cols[2] = self.ID     #also change cols so is reflected in __str__ 
+        
+            
+
     @property
     def ALLELES(self):
         ''' list of REF and ALT alleles in order '''
@@ -535,14 +558,14 @@ class VcfRecord(object):
         '''
 
         if self.__DECOMPOSED_ALLELES is None:
-            self._minimizeAlleles()
+            self._minimize_alleles()
         return self.__DECOMPOSED_ALLELES
         
     @DECOMPOSED_ALLELES.setter
     def DECOMPOSED_ALLELES(self, alleles):
         self.__DECOMPOSED_ALLELES = alleles
 
-    def _minimizeAlleles(self):
+    def _minimize_alleles(self):
         self.DECOMPOSED_ALLELES = []
         for alt in self.ALLELES[1:]:
             ref = self.ALLELES[0]
@@ -588,7 +611,7 @@ class VcfRecord(object):
     def INFO_FIELDS(self, i):
         self.__INFO_FIELDS = i
 
-    def addInfoFields(self, info):
+    def add_info_fields(self, info):
         ''' 
             Requires a dict of INFO field names to a list of values. 
             Adds or replaces existing INFO fields in the record with 
