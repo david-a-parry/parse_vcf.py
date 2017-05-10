@@ -200,14 +200,15 @@ class VcfReader(object):
         if not S_ISREG(self._mode):
             raise ParseError("Cannot run set_region() on a non-regular file")
         if (self.compressed):
-            if not pysam:
-                raise ParseError("pysam not available. Please install (e.g. " + 
-                                 "via 'pip install pysam' to search by " + 
-                                 "location on bgzip compressed VCFs.")
-            idx = self.filename + '.tbi'
-            if not os.path.isfile(idx):       #create index if it doesn't exist
-                pysam.tabix_index(self.filename, preset="vcf")
             if not self._tabix:
+                if not pysam:
+                    raise ParseError("pysam not available. Please install " + 
+                                     "(e.g. via 'pip install pysam' to " + 
+                                     "search by location on bgzip compressed" +
+                                     "VCFs.")
+                idx = self.filename + '.tbi'
+                if not os.path.isfile(idx):   #create index if it doesn't exist
+                    pysam.tabix_index(self.filename, preset="vcf")
                 self._tabix = pysam.Tabixfile(self.filename, 
                                               encoding=self.encoding)
             try:
