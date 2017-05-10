@@ -518,21 +518,22 @@ class VcfRecord(object):
         '''
             Adds given IDs to the ID field of the VCF record. If the 
             record already has an ID (i.e. is not '.') these IDs are 
-            appended to the existing value(s) unless the replace 
+            added to the existing value(s) unless the replace 
             argument is True.
         
             Args:
                 ids:     A list of IDs to add.
 
                 replace: If True, existing ID values are replaced, 
-                         otherwise the given IDs are appended to. 
+                         otherwise the given IDs are added to. 
                          Default = False.
 
         '''
         if replace or self.ID == '.':
             self.ID = str.join(';', ids)
         else:
-            self.ID += str.join(';', ids)
+            uids = set(ids + self.ID.split(';'))
+            self.ID = str.join(';', uids)
         self.cols[2] = self.ID     #also change cols so is reflected in __str__ 
         
             
