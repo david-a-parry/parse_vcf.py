@@ -937,7 +937,7 @@ class VcfRecord(object):
                 if 'ALLELE_NUM' in d:
                     d['alt_index'] = d['ALLELE_NUM']
                 else:
-                    d['alt_index'] = self._vepToAlt(d['Allele'])
+                    d['alt_index'] = self._vep_to_alt(d['Allele'])
                 self.__CSQ.append(d)
         return self.__CSQ
 
