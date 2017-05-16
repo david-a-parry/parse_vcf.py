@@ -254,7 +254,8 @@ class VcfHeader(object):
                      }
     __slots__ = ['meta_header', 'col_header', 'samples', 'sample_cols',
                  'metadata', 'fileformat', '__csq_label', '__csq_fields', 
-                 '_info_field_translater', '_format_field_translater'] 
+                 '_info_field_translater', '_format_field_translater', 
+                 '_sorted_meta_header'] 
 
 
     def __init__(self, meta_header, col_header):
@@ -264,6 +265,7 @@ class VcfHeader(object):
         '''
 
         self.meta_header = meta_header
+        self._sorted_meta_header = True
         self.col_header  = col_header
         self.samples     = col_header[9:] or None
         self.sample_cols = dict([(x,i) for (i,x)
@@ -287,6 +289,8 @@ class VcfHeader(object):
         self._parse_metadata()
 
     def __str__(self):
+        if not self._sorted_meta_header:
+            self._sort_meta_header()
         return (str.join("\n", self.meta_header) + "\n" +
                 str.join("\t", self.col_header) + "\n")
 
@@ -440,8 +444,91 @@ class VcfHeader(object):
                              "field type for translation")
         setter[field] = (ctype, split)
 
+    def addHeaderField(self, name, string=None, field_type=None, 
+                       dictionary=None):
+        '''
+            Add a header field with given name and optional field type,
+            and dictionary of properties.
 
-                
+            Args:
+                name:   name of field to add
+
+                string: string to add to field. Ignored if 'dictionary'
+                        is provided.
+    
+                field_type:
+                        type of field - e.g. if INFO/FILTER/FORMAT 
+                        field. Required if providing a dictionary.
+
+                dictionary:
+                        a dict of keys to values for the given field. 
+                        If 'field_type' is specified, this arg must be 
+                        provided and must contain all the essential keys
+                        for that field type. For example, an 'INFO' 
+                        field must have 'Number', 'Type', and 
+                        'Description' keys.
+
+        '''
+        
+        if dictionary is None and string is None:
+            raise Exception("Either dictionary or string argument is required")
+        if field_type is not None and field_type in self._required_keys:
+            if dictionary is None:
+                raise Exception("Header type {} requires a dictionary.".format(
+                                    field_type))
+        if dictionary:
+            if not field_type:
+                raise Exception("field_type is required for use with " +
+                                "dictionary")
+            if name in self.metadata[field_type]:
+                self.metadata[field_type][name].append(dictionary)
+            else:
+                self.metadata[field_type][name] = [dictionary]
+            h_vals = []
+            if field_type in self._required_keys:
+                #first append required keys in order
+                for k in self._required_keys[field_type]:
+                    try:
+                        h_vals.append(k + "=" + dictionary[k])
+                    except KeyError:
+                        raise Exception("Header type '{}'".format(field_type) + 
+                                        " requires '{}' field." .format(k))
+                #then append any additional keys
+                for k in dictionary:
+                    if k in self._required_keys[field_type]:
+                        continue
+                    h_vals.append(k + "=" + dictionary[k])
+            else:
+                for k in dictionary:
+                    h_vals.append(k + "=" + dictionary[k])
+            h_string = str.join(',', ['##' + field_type + "=<ID=" + name] + 
+                                h_vals) + ">"
+        else:
+            h_string = '##' + name + '=' + string
+            if name in self.metadata:
+                self.metadata[name].append(string)
+            else:
+                self.metadata[name] = [string]
+        self.meta_header.append(h_string)
+        self._sorted_meta_header = False
+                         
+    def _sort_meta_header(self):
+        ''' keep FORMAT/FILTER/INFO lines together and sorted '''
+        inf_filt_form = []
+        pre_inf = []
+        post_inf = []
+        for line in self.meta_header:
+            match = re.search('^##(FORMAT|FILTER|INFO)', line)
+            if match:
+                inf_filt_form.append(line)
+            elif len(inf_filt_form):
+                post_inf.append(line)
+            else:
+                pre_inf.append(line)
+        inf_filt_form.sort()
+        self.meta_header = pre_inf + inf_filt_form + post_inf
+        self._sorted_meta_header = True
+            
 
 class VcfRecord(object):
     ''' 
