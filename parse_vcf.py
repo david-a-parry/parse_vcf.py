@@ -537,6 +537,7 @@ class VcfRecord(object):
     '''
 
     _svalt_re = re.compile(r'''<(\w+)(:\w+)*>''') #group 1 gives SV type
+    _gt_splitter = re.compile(r'[\/\|]')
 
     __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
                  'FILTER', 'INFO', 'FORMAT', '__SPAN', '__CSQ', 'samples',  
@@ -916,17 +917,17 @@ class VcfRecord(object):
                                 
             
             >>> record.parsed_gts()
-            {'GT': {'Sample_1': '0/0', 'Sample_2': '0/1'},
+            {'GT': {'Sample_1': (0, 0), 'Sample_2': (0, 1)},
             'AD': {'Sample_1': [10, 0], 'Sample_2': [6, 6]},
             'DP': {'Sample_1': 10, 'Sample_2': 12},
             'GQ': {'Sample_1': 30, 'Sample_2': 33}}
             
             >>> record.parsed_gts(samples=['Sample_2'])
-            {'GT': {'Sample_2': '0/1'}, 'AD': {'Sample_2': [6, 6]},
+            {'GT': {'Sample_2': (0, 1)}, 'AD': {'Sample_2': [6, 6]},
             'DP': {'Sample_2': 12}, 'GQ': {'Sample_2': 33}}
 
             >>>  record.parsed_gts(fields=['GT', 'GQ'])
-            {'GT': {'Sample_1': '0/0', 'Sample_2': '0/1'},
+            {'GT': {'Sample_1': (0, 0), 'Sample_2': (0, 1)},
             'GQ': {'Sample_1': 30, 'Sample_2': 33}}
 
         '''
@@ -979,22 +980,35 @@ class VcfRecord(object):
         #f[0] is the class type of field, f[1] = True if values should be split
         pv = []
         for val in values:
-            try:
-                if f[1]:
-                    pv.append(list(map(f[0], val.split(','))))
-                else:
-                    pv.append(f[0](val))
-            except (ValueError, TypeError, AttributeError) as err:
-                if val is None or val == '.':
+            if field == 'GT': #GT is a special case, make tuples of alleles
+                alleles = self._gt_splitter.split(val) 
+                try:
+                    pv.append(tuple( int(x) for x in alleles))
+                except ValueError:
+                    nocall = tuple(None for x in alleles if x == '.')
+                    if not nocall:
+                        raise ParseErrror("Could not parse GT {}" 
+                                          .format(val) + " at {}:{}" .format(
+                                          self.CHROM, self.POS))
+                    pv.append(nocall)
+            else:
+                try:
                     if f[1]:
-                        pv.append([None])
+                        pv.append(list(map(f[0], val.split(','))))
                     else:
-                        pv.append(None)
-                else:
-                    raise err
-                    raise ParseError("Unexpected value ('{}') ".format(val) 
-                                    +"for {} " .format(field) + "FORMAT field "  
-                                    +"at {}:{}" .format(self.CHROM, self.POS))
+                        pv.append(f[0](val))
+                except (ValueError, TypeError, AttributeError) as err:
+                    if val is None or val == '.':
+                        if f[1]:
+                            pv.append([None])
+                        else:
+                            pv.append(None)
+                    else:
+                        raise err
+                        raise ParseError("Unexpected value ('{}')" .format(val) 
+                                       + " for {} " .format(field) + "FORMAT "  
+                                       + "field at {}:{}" .format(self.CHROM, 
+                                         self.POS))
         return pv
 
 
