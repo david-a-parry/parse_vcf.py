@@ -1,4 +1,5 @@
 import os
+import sys
 import gzip
 import re
 import warnings
@@ -131,12 +132,22 @@ class VcfReader(object):
             self.header = VcfHeader(head, cols)
         else:
             if self.compressed:
-                self.file = gzip.open(filename, encoding=encoding, mode='rt')
+                if filename == '-':
+                    gz = sys.stdin
+                else:
+                    gz = filename
+                self.file = gzip.open(gz, encoding=encoding, mode='rt')
             else:
-                self.file = open(filename, encoding=encoding, mode='r')
+                if filename == '-':
+                    self.file = sys.stdin
+                else:
+                    self.file = open(filename, encoding=encoding, mode='r')
             self.reader = (line.rstrip() for line in self.file if line.rstrip())
             self.header      = self._read_header()
-        self._mode = os.stat(self.filename).st_mode
+        if filename == '-':
+            self._is_reg_file = False
+        else:
+            self._is_reg_file = S_ISREG(os.stat(self.filename).st_mode)
         #read header information
         #set some header values for convenience
         self.metadata    = self.header.metadata
@@ -197,7 +208,7 @@ class VcfReader(object):
             >>> v.set_region('chr1:1000000-1000000')
 
         """
-        if not S_ISREG(self._mode):
+        if not self._is_reg_file:
             raise ParseError("Cannot run set_region() on a non-regular file")
         if (self.compressed):
             if not self._tabix:
