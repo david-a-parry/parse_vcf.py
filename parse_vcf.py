@@ -707,20 +707,54 @@ class VcfRecord(object):
     def INFO_FIELDS(self, i):
         self.__INFO_FIELDS = i
 
-    def add_info_fields(self, info):
+    def add_info_fields(self, info, append_existing=False):
         ''' 
             Requires a dict of INFO field names to a list of values. 
             Adds or replaces existing INFO fields in the record with 
             the items in given dict.
 
             Args:
-                info: a dict of INFO field names to add with values 
+                info: A dict of INFO field names to add with values 
                       being list of values for the given field.
+
+                append_existing:
+                      Add values to existing INFO fields in a record.
+                      If the field being added already exists and this
+                      argument is True, the values provided will be 
+                      added to the existing values. If the Number 
+                      property is a fixed value, multiple values at the 
+                      same index will be separated by '|' characters. 
+                      Otherwise they will be separated by commas.
+                      Default = False.
 
         '''
         for k,v in info.items():
-            self.INFO_FIELDS[k] = v
+            if append_existing and k in self.INFO_FIELDS:
+                self._append_to_existing_info(k, v)
+            else:
+                self.INFO_FIELDS[k] = v
         self._rewrite_info_string()
+
+    def _append_to_existing_info(self, field, values):
+        
+        if field in self.header.metadata['INFO'][field]:
+            if self.header.metadata['INFO'][field]['Type'] == 'Flag':
+                self.INFO_FIELDS[field] = True
+                return
+            elif self.header.metadata['INFO'][field]['Number'] == '.':
+                self.INFO_FIELDS[field] += "," + values
+                return
+            elif self.header.metadata['INFO'][field]['Number'] == '1':
+                self.INFO_FIELDS[field] += "|" + values
+                return
+        old = self.INFO_FIELDS[field].split(",")
+        new = str(values).split(",")
+        if (len(old) != len(new)):
+            raise ParseError("New {} INFO field '{}'" .format(field, values) + 
+                             "has differing number of values to existing " + 
+                             "field '{}'" .format(self.INFO_FIELDS[field])) 
+        self.INFO_FIELDS[field] = str.join(",", (str.join("|", x) for x in 
+                                                                zip(old, new)))
 
     def _rewrite_info_string(self):
         info = []
