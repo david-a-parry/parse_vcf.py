@@ -737,14 +737,14 @@ class VcfRecord(object):
 
     def _append_to_existing_info(self, field, values):
         
-        if field in self.header.metadata['INFO'][field]:
-            if self.header.metadata['INFO'][field]['Type'] == 'Flag':
+        if field in self.header.metadata['INFO']:
+            if self.header.metadata['INFO'][field][-1]['Type'] == 'Flag':
                 self.INFO_FIELDS[field] = True
                 return
-            elif self.header.metadata['INFO'][field]['Number'] == '.':
+            elif self.header.metadata['INFO'][field][-1]['Number'] == '.':
                 self.INFO_FIELDS[field] += "," + values
                 return
-            elif self.header.metadata['INFO'][field]['Number'] == '1':
+            elif self.header.metadata['INFO'][field][-1]['Number'] == '1':
                 self.INFO_FIELDS[field] += "|" + values
                 return
         old = self.INFO_FIELDS[field].split(",")
