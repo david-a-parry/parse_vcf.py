@@ -812,7 +812,7 @@ class VcfRecord(object):
                     pv = None
                 else:
                     raise ParseError("Unexpected value type for " +
-                                     "{} ".format(field) + "FORMAT field at " +
+                                     "{} ".format(field) + "INFO field at " +
                                      " {}:{}" .format(self.CHROM, self.POS))
         self._parsed_info[field] = pv
         return pv
@@ -1188,6 +1188,37 @@ class VcfRecord(object):
                     self._vep_allele.update(trimmed)
         return self._vep_allele[allele]
 
+    def in_cis_with(self, sample, allele, other, other_allele):
+        ''' 
+            Returns True if the two alleles are physically phased
+            according to the PID and PGT fields of both records.
+        
+            Args:
+                sample: Sample ID to check phasing data for.
+
+                allele: Allele number of this record.
+
+                other:  Other record to compare with this record.
+
+                other_allele:
+                        Allele number for other record.
+
+        '''
+        if 'PID' not in self.GT_FORMAT or 'PID' not in other.GT_FORMAT:
+            return False
+        if 'PGT' not in self.GT_FORMAT or 'PGT' not in other.GT_FORMAT:
+            return False
+        pid1 = self.sample_calls()[sample]['PID']
+        pid2 = other.sample_calls()[sample]['PID']
+        pgt1 = self.sample_calls()[sample]['PGT']
+        pgt2 = other.sample_calls()[sample]['PGT']
+        if pid1 != pid2:
+            return False
+        if pgt1 == '.' or pgt2  == '.':
+            return False
+        phase1 = pgt1.split('|').index(str(allele))
+        phase2 = pgt2.split('|').index(str(other_allele))
+        return phase1 == phase2
 
 class AltAllele(object):
     '''
