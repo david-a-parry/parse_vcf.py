@@ -554,7 +554,7 @@ class VcfRecord(object):
                  'FILTER', 'INFO', 'FORMAT', '__SPAN', '__CSQ', 'samples',  
                  '_sample_idx', '__CALLS', '__ALLELES', '__DECOMPOSED_ALLELES', 
                  '__INFO_FIELDS',  'GT_FORMAT', '_SAMPLE_GTS', '_got_gts', 
-                 '_vep_allele', ]
+                 '_vep_allele', '_parsed_info', '_parsed_gts']
 
     def __init__(self, line, caller):
         ''' 
@@ -594,6 +594,8 @@ class VcfRecord(object):
         self.CSQ                = None
         self._SAMPLE_GTS        = {}
         self._vep_allele        = {}
+        self._parsed_info       = {}
+        self._parsed_gts        = {}
         self._got_gts           = False       #flag indicating whether we've already 
                                          #retrieved GT dicts for every sample
 
@@ -776,10 +778,14 @@ class VcfRecord(object):
         else:
             f_list = list(self.INFO_FIELDS)
         d = dict( (f, self._get_parsed_info_value(f, self.INFO_FIELDS[f])) 
-                                                               for f in f_list)
+                                                       for f in f_list)
         return d
             
     def _get_parsed_info_value(self, field, value):
+        try:
+            return self._parsed_info[field]
+        except KeyError:
+            pass
         try:
             f = self.header._info_field_translater[field]
         except KeyError:
@@ -806,8 +812,9 @@ class VcfRecord(object):
                     pv = None
                 else:
                     raise ParseError("Unexpected value type for " +
-                                     "{} ".format(field) + "FORMAT field at " +
+                                     "{} ".format(field) + "INFO field at " +
                                      " {}:{}" .format(self.CHROM, self.POS))
+        self._parsed_info[field] = pv
         return pv
             
     @property
@@ -963,12 +970,12 @@ class VcfRecord(object):
             
             >>> record.parsed_gts()
             {'GT': {'Sample_1': (0, 0), 'Sample_2': (0, 1)},
-            'AD': {'Sample_1': [10, 0], 'Sample_2': [6, 6]},
+            'AD': {'Sample_1': (10, 0), 'Sample_2': (6, 6)},
             'DP': {'Sample_1': 10, 'Sample_2': 12},
             'GQ': {'Sample_1': 30, 'Sample_2': 33}}
             
             >>> record.parsed_gts(samples=['Sample_2'])
-            {'GT': {'Sample_2': (0, 1)}, 'AD': {'Sample_2': [6, 6]},
+            {'GT': {'Sample_2': (0, 1)}, 'AD': {'Sample_2': (6, 6)},
             'DP': {'Sample_2': 12}, 'GQ': {'Sample_2': 33}}
 
             >>>  record.parsed_gts(fields=['GT', 'GQ'])
@@ -986,11 +993,30 @@ class VcfRecord(object):
             s_list = samples
         else:
             s_list = self.header.samples
+        updated = False
         for f in f_list:
-            d[f] = dict(zip(s_list, self._get_parsed_gt_fields(f,
-                        (self.sample_calls()[s][f] if f in 
-                        self.sample_calls()[s] else None 
-                        for s in s_list) ) ) )
+            if f in self._parsed_gts:
+                missing_samps = [s for s in s_list if s not in self._parsed_gts[f]]
+                if not missing_samps:
+                    d[f] = self._parsed_gts[f]
+                    continue
+                elif missing_samps != s_list: #some missing samps, but not all
+                    updated = True
+                    d[f] = dict((s, self._parsed_gts[f][s]) for s in s_list 
+                                if s in self._parsed_gts[f])
+                    d[f].update(dict(zip(missing_samps, 
+                                self._get_parsed_gt_fields(f,
+                                (self.sample_calls()[s][f] if f in 
+                                self.sample_calls()[s] else None 
+                                for s in missing_samps)))))
+            else:
+                updated = True
+                d[f] = dict(zip(s_list, self._get_parsed_gt_fields(f,
+                            (self.sample_calls()[s][f] if f in 
+                            self.sample_calls()[s] else None 
+                            for s in s_list) ) ) )
+        if updated:
+            self._parsed_gts.update(d)
         return d
         
     def _get_parsed_gt_fields(self, field, values=[]):
@@ -1039,13 +1065,13 @@ class VcfRecord(object):
             else:
                 try:
                     if f[1]:
-                        pv.append(list(map(f[0], val.split(','))))
+                        pv.append(tuple(map(f[0], val.split(','))))
                     else:
                         pv.append(f[0](val))
                 except (ValueError, TypeError, AttributeError) as err:
                     if val is None or val == '.':
                         if f[1]:
-                            pv.append([None])
+                            pv.append((None,))
                         else:
                             pv.append(None)
                     else:
@@ -1162,6 +1188,37 @@ class VcfRecord(object):
                     self._vep_allele.update(trimmed)
         return self._vep_allele[allele]
 
+    def in_cis_with(self, sample, allele, other, other_allele):
+        ''' 
+            Returns True if the two alleles are physically phased
+            according to the PID and PGT fields of both records.
+        
+            Args:
+                sample: Sample ID to check phasing data for.
+
+                allele: Allele number of this record.
+
+                other:  Other record to compare with this record.
+
+                other_allele:
+                        Allele number for other record.
+
+        '''
+        if 'PID' not in self.GT_FORMAT or 'PID' not in other.GT_FORMAT:
+            return False
+        if 'PGT' not in self.GT_FORMAT or 'PGT' not in other.GT_FORMAT:
+            return False
+        pid1 = self.sample_calls()[sample]['PID']
+        pid2 = other.sample_calls()[sample]['PID']
+        pgt1 = self.sample_calls()[sample]['PGT']
+        pgt2 = other.sample_calls()[sample]['PGT']
+        if pid1 != pid2:
+            return False
+        if pgt1 == '.' or pgt2  == '.':
+            return False
+        phase1 = pgt1.split('|').index(str(allele))
+        phase2 = pgt2.split('|').index(str(other_allele))
+        return phase1 == phase2
 
 class AltAllele(object):
     '''
