@@ -64,7 +64,7 @@ def test_read_variant():
                  [gts2[x]['Sample_1'] for x in gts2])
     assert_equal([gts[x]['Sample_138'] for x in gts], 
                  [gts2[x]['Sample_138'] for x in gts2])
-    assert_equal(True, 'Sample_4' not in gts['GT'])
+    assert('Sample_4' not in gts['GT'])
     assert_equal([gts2[x]['Sample_4'] for x in gts2], 
                  [(0, 0), [7, 0], 7, 21, [0, 21, 276]])
                  
