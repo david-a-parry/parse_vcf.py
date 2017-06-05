@@ -970,12 +970,12 @@ class VcfRecord(object):
             
             >>> record.parsed_gts()
             {'GT': {'Sample_1': (0, 0), 'Sample_2': (0, 1)},
-            'AD': {'Sample_1': [10, 0], 'Sample_2': [6, 6]},
+            'AD': {'Sample_1': (10, 0), 'Sample_2': (6, 6)},
             'DP': {'Sample_1': 10, 'Sample_2': 12},
             'GQ': {'Sample_1': 30, 'Sample_2': 33}}
             
             >>> record.parsed_gts(samples=['Sample_2'])
-            {'GT': {'Sample_2': (0, 1)}, 'AD': {'Sample_2': [6, 6]},
+            {'GT': {'Sample_2': (0, 1)}, 'AD': {'Sample_2': (6, 6)},
             'DP': {'Sample_2': 12}, 'GQ': {'Sample_2': 33}}
 
             >>>  record.parsed_gts(fields=['GT', 'GQ'])
@@ -1065,13 +1065,13 @@ class VcfRecord(object):
             else:
                 try:
                     if f[1]:
-                        pv.append(list(map(f[0], val.split(','))))
+                        pv.append(tuple(map(f[0], val.split(','))))
                     else:
                         pv.append(f[0](val))
                 except (ValueError, TypeError, AttributeError) as err:
                     if val is None or val == '.':
                         if f[1]:
-                            pv.append([None])
+                            pv.append((None,))
                         else:
                             pv.append(None)
                     else:

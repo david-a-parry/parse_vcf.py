@@ -56,9 +56,9 @@ def test_read_variant():
 #1       1025535 rs113100937     C       G       992.83  PASS    AC=4;AF=8.439e-03;AN=474;
     gts = record.parsed_gts(samples=['Sample_1', 'Sample_138'])
     assert_equal([gts[x]['Sample_1'] for x in gts], 
-                 [(0, 0), [10, 0], 10, 30, [0, 30, 389]])
+                 [(0, 0), (10, 0), 10, 30, (0, 30, 389)])
     assert_equal([gts[x]['Sample_138'] for x in gts], 
-                 [(0, 0), [23, 0], 23, 66, [0, 66, 842]])
+                 [(0, 0), (23, 0), 23, 66, (0, 66, 842)])
     gts2 = record.parsed_gts()
     assert_equal([gts[x]['Sample_1'] for x in gts], 
                  [gts2[x]['Sample_1'] for x in gts2])
@@ -66,5 +66,5 @@ def test_read_variant():
                  [gts2[x]['Sample_138'] for x in gts2])
     assert('Sample_4' not in gts['GT'])
     assert_equal([gts2[x]['Sample_4'] for x in gts2], 
-                 [(0, 0), [7, 0], 7, 21, [0, 21, 276]])
+                 [(0, 0), (7, 0), 7, 21, (0, 21, 276)])
                  
