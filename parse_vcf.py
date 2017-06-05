@@ -1216,9 +1216,15 @@ class VcfRecord(object):
             return False
         if pgt1 == '.' or pgt2  == '.':
             return False
-        phase1 = pgt1.split('|').index(str(allele))
-        phase2 = pgt2.split('|').index(str(other_allele))
-        return phase1 == phase2
+        try:
+            phase1 = pgt1.split('|').index(str(allele))
+            phase2 = pgt2.split('|').index(str(other_allele))
+            return phase1 == phase2
+        except ValueError: #allele might not be in phase group
+            # TODO: for some multiallelic variants I've spotted that the GT is
+            # '0/2' while the PGT is '0|1' - is this a bug in HaplotypeCaller 
+            # or will the 'ALT' always be 1 in the PGT?
+            return False
 
 class AltAllele(object):
     '''
