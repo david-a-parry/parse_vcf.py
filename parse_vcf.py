@@ -455,7 +455,7 @@ class VcfHeader(object):
                              "field type for translation")
         setter[field] = (ctype, split)
 
-    def addHeaderField(self, name, string=None, field_type=None, 
+    def add_header_field(self, name, string=None, field_type=None, 
                        dictionary=None):
         '''
             Add a header field with given name and optional field type,
