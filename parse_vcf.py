@@ -731,7 +731,7 @@ class VcfRecord(object):
                       Default = False.
 
         '''
-        for k,v in info.items():
+        for k,v in sorted(info.items()):
             if append_existing and k in self.INFO_FIELDS:
                 self._append_to_existing_info(k, v)
             else:
