@@ -3,6 +3,7 @@ import sys
 import gzip
 import re
 import warnings
+from collections import defaultdict
 from stat import S_ISREG
 try:
     import pysam
@@ -595,7 +596,7 @@ class VcfRecord(object):
         self._SAMPLE_GTS        = {}
         self._vep_allele        = {}
         self._parsed_info       = {}
-        self._parsed_gts        = {}
+        self._parsed_gts        = defaultdict(dict)
         self._got_gts           = False       #flag indicating whether we've already 
                                          #retrieved GT dicts for every sample
 
@@ -984,7 +985,7 @@ class VcfRecord(object):
 
         '''
     
-        d = {}
+        d = defaultdict(dict)
         if fields is not None:
             f_list = fields
         else:
@@ -1000,15 +1001,17 @@ class VcfRecord(object):
                 if not missing_samps:
                     d[f] = self._parsed_gts[f]
                     continue
-                elif missing_samps != s_list: #some missing samps, but not all
+                else:
                     updated = True
-                    d[f] = dict((s, self._parsed_gts[f][s]) for s in s_list 
-                                if s in self._parsed_gts[f])
+                    if missing_samps != s_list: #some missing samps, but not all
+                        d[f].update(dict((s, self._parsed_gts[f][s]) for s in s_list 
+                                    if s in self._parsed_gts[f]))
                     d[f].update(dict(zip(missing_samps, 
                                 self._get_parsed_gt_fields(f,
                                 (self.sample_calls()[s][f] if f in 
                                 self.sample_calls()[s] else None 
                                 for s in missing_samps)))))
+                    
             else:
                 updated = True
                 d[f] = dict(zip(s_list, self._get_parsed_gt_fields(f,
@@ -1016,7 +1019,8 @@ class VcfRecord(object):
                             self.sample_calls()[s] else None 
                             for s in s_list) ) ) )
         if updated:
-            self._parsed_gts.update(d)
+            for f in f_list:
+                self._parsed_gts[f].update(d[f])
         return d
         
     def _get_parsed_gt_fields(self, field, values=[]):
