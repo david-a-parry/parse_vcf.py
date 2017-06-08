@@ -144,7 +144,7 @@ class VcfReader(object):
                 else:
                     self.file = open(filename, encoding=encoding, mode='r')
             self.reader = (line.rstrip() for line in self.file if line.rstrip())
-            self.header      = self._read_header()
+            self.header = self._read_header()
         if filename == '-':
             self._is_reg_file = False
         else:
@@ -164,7 +164,7 @@ class VcfReader(object):
         """
 
         meta_header = []
-        coln_header  = []
+        coln_header = []
         for line in self.reader:
             if line.startswith('##'):
                 meta_header += [line]
