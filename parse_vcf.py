@@ -3,7 +3,7 @@ import sys
 import gzip
 import re
 import warnings
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from stat import S_ISREG
 try:
     import pysam
@@ -697,7 +697,7 @@ class VcfRecord(object):
         VCF header, use the 'parsed_info_fields()' method.
         '''
         if self.__INFO_FIELDS is None:
-            self.__INFO_FIELDS = {}
+            self.__INFO_FIELDS = OrderedDict()
             for i in self.INFO.split(';'):
                 try:
                     (f, v) = i.split('=', 1)
