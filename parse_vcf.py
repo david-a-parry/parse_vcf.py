@@ -775,7 +775,7 @@ class VcfRecord(object):
 
     def parsed_info_fields(self, fields=None):
         if fields is not None:
-            f_list = fields
+            f_list = [x for x in fields if x in self.INFO_FIELDS]
         else:
             f_list = list(self.INFO_FIELDS)
         d = dict( (f, self._get_parsed_info_value(f, self.INFO_FIELDS[f])) 
@@ -804,17 +804,15 @@ class VcfRecord(object):
             pv = True
         else: 
             try: 
+                conv = lambda x: None if x == '.' else f[0](x)
                 if (f[1]):
-                    pv = list(map(f[0], value.split(',')))
+                    pv = list(map(conv, value.split(',')))
                 else:
-                    pv = f[0](value)
+                    pv = conv(value)
             except (ValueError, TypeError, AttributeError):
-                if value == '.' or value is None:
-                    pv = None
-                else:
-                    raise ParseError("Unexpected value type for " +
-                                     "{} ".format(field) + "INFO field at " +
-                                     " {}:{}" .format(self.CHROM, self.POS))
+                raise ParseError("Unexpected value type in value '{}' for {} "
+                                 .format(field, value) + "INFO field at " +
+                                 " {}:{}" .format(self.CHROM, self.POS))
         self._parsed_info[field] = pv
         return pv
             
