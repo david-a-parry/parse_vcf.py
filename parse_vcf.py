@@ -597,7 +597,7 @@ class VcfRecord(object):
         self._vep_allele        = {}
         self._parsed_info       = {}
         self._parsed_gts        = defaultdict(dict)
-        self._got_gts           = False       #flag indicating whether we've already 
+        self._got_gts           = False  #flag indicating whether we've already 
                                          #retrieved GT dicts for every sample
 
         if len(self.cols) > 8:
@@ -997,15 +997,16 @@ class VcfRecord(object):
         updated = False
         for f in f_list:
             if f in self._parsed_gts:
-                missing_samps = [s for s in s_list if s not in self._parsed_gts[f]]
+                missing_samps = [s for s in s_list if s not in 
+                                                           self._parsed_gts[f]]
                 if not missing_samps:
                     d[f] = self._parsed_gts[f]
                     continue
                 else:
                     updated = True
-                    if missing_samps != s_list: #some missing samps, but not all
-                        d[f].update(dict((s, self._parsed_gts[f][s]) for s in s_list 
-                                    if s in self._parsed_gts[f]))
+                    if missing_samps != s_list: #some missing samps,but not all
+                        d[f].update(dict((s, self._parsed_gts[f][s]) for s in 
+                                    s_list if s in self._parsed_gts[f]))
                     d[f].update(dict(zip(missing_samps, 
                                 self._get_parsed_gt_fields(f,
                                 (self.sample_calls()[s][f] if f in 
