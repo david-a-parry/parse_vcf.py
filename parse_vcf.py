@@ -1107,7 +1107,7 @@ class VcfRecord(object):
             self.__CSQ = []
             alleleToNum = {}
             for c in csqs:
-                d = dict([(k,v) for (k, v) in zip(self.header.csq_fields, 
+                d = OrderedDict([(k,v) for (k, v) in zip(self.header.csq_fields, 
                                                               c.split('|'))]) 
                 if 'ALLELE_NUM' in d:
                     d['alt_index'] = d['ALLELE_NUM']
