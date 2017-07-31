@@ -1,8 +1,8 @@
-from distutils.core import setup
+from setuptools import setup
 setup(
     name = "parse_vcf",
     packages = [""],
-    version = "0.1",
+    version = "0.1a1",
     description = "Variant Call Format parser and convenience methods",
     author = "David A. Parry",
     author_email = "gantzgraf@github.com",
@@ -16,5 +16,8 @@ setup(
         "Programming Language :: Python :: 3",
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "Topic :: Scientific/Engineering :: Bio-Informatics",
         ],
 )
