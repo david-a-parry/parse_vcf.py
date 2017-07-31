@@ -7,7 +7,7 @@ setup(
     author = "David A. Parry",
     author_email = "david.parry@igmm.ed.ac.uk",
     url = "https://github.com/gantzgraf/parse_vcf",
-    download_url = 'https://github.com/gantzgraf/parse_vcf/archive/0.1.tar.gz',
+    download_url = 'https://github.com/gantzgraf/parse_vcf/archive/0.1a1.tar.gz',
     test_suite='nose.collector',
     tests_require=['nose'],
     install_requires=['pysam'],
