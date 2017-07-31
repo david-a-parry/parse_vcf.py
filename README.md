@@ -1,9 +1,8 @@
 # parse_vcf.py
 
 An attempt to create a reasonably fast VCF parser in Python with convenience
-methods for retrieving variant information and sample genotype data
-
-Currently in planning stage
+methods for retrieving variant information, sample genotype data and VEP CSQ
+annotations
 
 
 __COPYRIGHT AND LICENSE__
