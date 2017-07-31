@@ -5,7 +5,7 @@ setup(
     version = "0.1a1",
     description = "Variant Call Format parser and convenience methods",
     author = "David A. Parry",
-    author_email = "gantzgraf@github.com",
+    author_email = "david.parry@igmm.ed.ac.uk",
     url = "https://github.com/gantzgraf/parse_vcf",
     download_url = 'https://github.com/gantzgraf/parse_vcf/archive/0.1.tar.gz',
     test_suite='nose.collector',
