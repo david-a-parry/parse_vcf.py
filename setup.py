@@ -1,7 +1,7 @@
 from distutils.core import setup
 setup(
     name = "parse_vcf",
-    packages = ["parse_vcf"],
+    packages = [""],
     version = "0.1",
     description = "Variant Call Format parser and convenience methods",
     author = "David A. Parry",
