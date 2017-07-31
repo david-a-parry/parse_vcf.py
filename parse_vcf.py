@@ -83,10 +83,30 @@ COMMON_FORMAT = {
 
 class VcfReader(object):
     """ 
-        doc TODO - individual methods documentation available
+        A class for parsing Variant Call Format (VCF) files. Stores 
+        header information as a VcfHeader object in self.header and an
+        iterable variant parser (returning VcfRecord objects) in 
+        self.parser.
+
+        If your input is compressed and indexed, you may iterate over 
+        genomic regions instead of processing through the file line by 
+        line. 
+        
+        Examples:
+            #process line by line
+            >>> v = VcfReader('path/to/my/input.vcf')
+            >>> for record in v.parser:
+            ... #do something with each record
+
+            #process variants overlapping a given region
+            >>> v = VcfReader('path/to/my/indexed.vcf.gz')
+            >>> v.set_region(chrom='chr1', start=899999 end=1000000)
+            >>> for record in v.parser:
+            ... #do something with each record
+
     """
     
-    def __init__(self, filename=None, compressed=None, bcf=None, 
+    def __init__(self, filename, compressed=None, bcf=None, 
                  encoding='utf-8'):
         """ 
             Create a new VcfReader object
@@ -109,8 +129,6 @@ class VcfReader(object):
 
         """
         
-        if not filename :
-            raise ParseError('You must provide a filename')
         self.filename = filename
         self.compressed = compressed
         self.bcf = bcf
@@ -154,8 +172,6 @@ class VcfReader(object):
         self.metadata    = self.header.metadata
         self.col_header  = self.header.col_header
         self.parser      = (VcfRecord(line, self,) for line in self.reader)
-        self.var         = None
-        
 
     def _read_header(self):
         """ 
