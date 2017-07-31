@@ -1,0 +1,4 @@
+include parse_vcf.py
+include README.md
+include LICENSE.txt
+exclude test_parse_vcf.py
