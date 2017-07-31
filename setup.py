@@ -11,6 +11,7 @@ setup(
     test_suite='nose.collector',
     tests_require=['nose'],
     install_requires=['pysam'],
+    python_requires='>=3',
     classifiers = [
         "Programming Language :: Python :: 3",
         "Development Status :: 3 - Alpha",
