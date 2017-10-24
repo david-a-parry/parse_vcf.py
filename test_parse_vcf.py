@@ -12,6 +12,10 @@ def test_column_error():
     assert_raises(HeaderError, VcfReader, 'test_data/invalid_col_header.vcf')
     assert_raises(HeaderError, VcfReader, 'test_data/invalid_col_header2.vcf')
 
+def test_not_enough_fields_error():
+    vcf = VcfReader("test_data/invalid_first_var.vcf")
+    assert_raises(ParseError, next, vcf.parser) 
+
 def test_open():
     vcf = VcfReader("test_data/test1.vcf")
     assert(vcf)
