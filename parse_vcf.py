@@ -592,9 +592,15 @@ class VcfRecord(object):
         self.cols = line.split("\t", 9) #only collect first 9 columns initially
                                         #splitting whole line on a VCF with
                                         #lots of columns/samples is costly
-
-        ( self.CHROM, pos, self.ID, self.REF, self.ALT,  
-          qual, self.FILTER, self.INFO ) = self.cols[:8] 
+        try:
+            ( self.CHROM, pos, self.ID, self.REF, self.ALT,  
+              qual, self.FILTER, self.INFO ) = self.cols[:8] 
+        except ValueError as err:
+            if len(self.cols) < 8:
+                raise ParseError("Not enough columns for following line:\n{}"
+                                 .format(line))
+            else:
+                raise err
         self.POS = int(pos)
         try:
             self.QUAL = float(qual)
@@ -1227,10 +1233,14 @@ class VcfRecord(object):
             return False
         if 'PGT' not in self.GT_FORMAT or 'PGT' not in other.GT_FORMAT:
             return False
-        pid1 = self.sample_calls()[sample]['PID']
-        pid2 = other.sample_calls()[sample]['PID']
-        pgt1 = self.sample_calls()[sample]['PGT']
-        pgt2 = other.sample_calls()[sample]['PGT']
+        try:
+            pid1 = self.sample_calls()[sample]['PID']
+            pid2 = other.sample_calls()[sample]['PID']
+            pgt1 = self.sample_calls()[sample]['PGT']
+            pgt2 = other.sample_calls()[sample]['PGT']
+        except KeyError:    
+            #when joining VCFs together only some samples may have PID/PGT
+            return False
         if pid1 != pid2:
             return False
         if pgt1 == '.' or pgt2  == '.':
