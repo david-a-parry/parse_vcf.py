@@ -155,12 +155,15 @@ class VcfReader(object):
                     gz = sys.stdin
                 else:
                     gz = filename
-                self.file = gzip.open(gz, encoding=encoding, mode='rt')
+                #self.file = gzip.open(gz, encoding=encoding, mode='rt')
+                self.file = gzip.open(gz, encoding=encoding, errors='replace',
+                                      mode='rt')
             else:
                 if filename == '-':
                     self.file = sys.stdin
                 else:
-                    self.file = open(filename, encoding=encoding, mode='r')
+                    self.file = open(filename, encoding=encoding, 
+                                     errors='replace', mode='r')
             self.reader = (line.rstrip() for line in self.file if line.rstrip())
             self.header = self._read_header()
         if filename == '-':
@@ -827,8 +830,12 @@ class VcfRecord(object):
         else: 
             try: 
                 conv = lambda x: None if x == '.' else f[0](x)
-                if (f[1]):
-                    pv = list(map(conv, value.split(',')))
+                if f[1]:
+                    if isinstance(value, str):
+                        pv = list(map(conv, value.split(',')))
+                    else:
+                        #if newly added INFO field it may already be a list
+                        pv = list(map(conv, value))
                 else:
                     pv = conv(value)
             except (ValueError, TypeError, AttributeError):
@@ -1151,10 +1158,12 @@ class VcfRecord(object):
         is_indel = False
         is_mnv = False
         ref = self.ALLELES[0]
+        asterisk = False
         for i in range(1, len(self.ALLELES)):
             alt = self.ALLELES[i]
             if alt == '*':
                 self._vep_allele[alt] = i
+                asterisk = True
             else:
                 matches_sv = self._svalt_re.match(alt)
                 if matches_sv:
@@ -1184,7 +1193,9 @@ class VcfRecord(object):
                 raise ParseError("Unable to parse structural variants at the "
                                + "same site as a non-structural variant")
         else:
-            if not is_snv and is_indel:
+            if not is_snv and (is_indel or 
+                               (is_mnv and asterisk) #go home VEP, you're drunk
+            ):
                 #VEP trims first base unless REF and ALT differ at first base
                 first_base_differs = False
                 ref_start = ref[:1]
