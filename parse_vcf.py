@@ -568,6 +568,8 @@ class VcfRecord(object):
     '''
 
     _svalt_re = re.compile(r'''<(\w+)(:\w+)*>''') #group 1 gives SV type
+    _bnd_re = re.compile(r'''^(([ACTGN]*)[\[\]]\w+):\d+[\]\[]([ACGTN]*)$''')
+        #group 1 gives VEP CSQ allele
     _gt_splitter = re.compile(r'[\/\|]')
 
     __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
@@ -1141,7 +1143,7 @@ class VcfRecord(object):
                 if 'ALLELE_NUM' in d:
                     d['alt_index'] = d['ALLELE_NUM']
                 else:
-                    d['alt_index'] = self._vep_to_alt(d['Allele'])
+                    d['alt_index'] = self._vep_to_alt(d)
                 self.__CSQ.append(d)
         return self.__CSQ
 
@@ -1149,10 +1151,14 @@ class VcfRecord(object):
     def CSQ(self, c):
         self.__CSQ = c
         
-    def _vep_to_alt(self, allele):
+    def _vep_to_alt(self, csq):
         #figure out how alleles will be handled by looking at the REF vs ALTs
-        if self._vep_allele:
+        allele = csq['Allele']
+        if allele in self._vep_allele:
             return self._vep_allele[allele]
+        if len(self.ALLELES) == 2: #only one ALT allele
+            self._vep_allele[allele] = 1
+            return 1
         is_sv = False
         is_snv = False
         is_indel = False
@@ -1166,9 +1172,16 @@ class VcfRecord(object):
                 asterisk = True
             else:
                 matches_sv = self._svalt_re.match(alt)
-                if matches_sv:
+                matches_bnd = self._bnd_re.match(alt)
+                if matches_sv or matches_bnd:
                     is_sv = True
-                    sv_type = matches_sv.group(1)
+                    #sometimes VEP unhelpfully just uses '-'
+                    if allele == '-':
+                        sv_type = '-'
+                    elif matches_sv:
+                        sv_type = matches_sv.group(1)
+                    else:
+                        sv_type = matches_bnd.group(1)
                     if sv_type == 'DUP':
                         self._vep_allele['duplication'] = i
                     elif sv_type == 'INS':
@@ -1176,7 +1189,7 @@ class VcfRecord(object):
                     elif sv_type == 'DEL':
                         self._vep_allele['deletion'] = i
                     else:
-                        self._vep_allele[sv_type] = i #should catch CNVs
+                        self._vep_allele[sv_type] = i #should catch CNVs, INVs, BNDs
                 else:
                     if len(alt) == 1 and len(ref) == 1:
                         is_snv = True
@@ -1184,6 +1197,20 @@ class VcfRecord(object):
                         is_mnv = True
                     else:
                         is_indel = True
+                    if is_indel:
+                        # special case for longer non SV type 'deletion' 
+                        # 'insertion' or 'duplication' alleles which VEP 
+                        # sometimes annotates as deletion/insertion/duplication 
+                        # despite presence of REF/ALT sequences
+                        if allele == 'deletion' and  len(alt) < len(ref):
+                            self._vep_allele[allele] = i 
+                            return i
+                        elif allele == 'insertion' and  len(alt) > len(ref):
+                            self._vep_allele[allele] = i 
+                            return i
+                        elif allele == 'duplication' and  len(alt) > len(ref):
+                            self._vep_allele[allele] = i 
+                            return i
                     self._vep_allele[alt] = i
                 
         if is_sv:
