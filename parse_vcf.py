@@ -1140,8 +1140,10 @@ class VcfRecord(object):
             for c in csqs:
                 d = OrderedDict([(k,v) for (k, v) in zip(self.header.csq_fields, 
                                                               c.split('|'))]) 
-                if 'ALLELE_NUM' in d:
-                    d['alt_index'] = d['ALLELE_NUM']
+                if len(self.ALLELES) == 2: #only one ALT allele
+                    d['alt_index'] = 1
+                elif 'ALLELE_NUM' in d:
+                    d['alt_index'] = int(d['ALLELE_NUM'])
                 else:
                     d['alt_index'] = self._vep_to_alt(d)
                 self.__CSQ.append(d)
@@ -1156,9 +1158,6 @@ class VcfRecord(object):
         allele = csq['Allele']
         if allele in self._vep_allele:
             return self._vep_allele[allele]
-        if len(self.ALLELES) == 2: #only one ALT allele
-            self._vep_allele[allele] = 1
-            return 1
         is_sv = False
         is_snv = False
         is_indel = False
