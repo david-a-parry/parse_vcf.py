@@ -1191,7 +1191,8 @@ class VcfRecord(object):
                         self._vep_allele[sv_type] = i #should catch CNVs, INVs, BNDs
                 else:
                     if len(alt) == 1 and len(ref) == 1:
-                        is_snv = True
+                        if alt != ref:
+                            is_snv = True
                     elif len(alt) == len(ref):
                         is_mnv = True
                     else:
