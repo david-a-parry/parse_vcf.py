@@ -515,6 +515,7 @@ class VcfHeader(object):
                 self.metadata[field_type][name].append(dictionary)
             else:
                 self.metadata[field_type][name] = [dictionary]
+                self._set_field_translation(field_type, name)
             h_vals = []
             if field_type in self._required_keys:
                 #first append required keys in order
