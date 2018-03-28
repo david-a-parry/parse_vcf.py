@@ -1,5 +1,5 @@
 from nose.tools import *
-from parse_vcf.parse_vcf import *
+from parse_vcf import *
 import subprocess
 
 def test_exception_on_no_file():
