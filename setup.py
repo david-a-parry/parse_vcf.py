@@ -12,12 +12,13 @@ setup(
     tests_require=['nose'],
     install_requires=['pysam'],
     python_requires='>=3',
+    license='MIT',
     classifiers = [
         "Programming Language :: Python :: 3",
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "License :: OSI Approved :: MIT License",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         ],
 )
