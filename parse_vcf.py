@@ -351,11 +351,11 @@ class VcfHeader(object):
 
         if self.__csq_fields is None:
             try:
-                csq_header = self.metadata['INFO']['CSQ'][-1]
+                csq_header = self.metadata['INFO']['CSQ'][0]
                 csq = 'CSQ'
             except KeyError:
                 try:
-                    csq_header = self.metadata['INFO']['ANN'][-1]
+                    csq_header = self.metadata['INFO']['ANN'][0]
                     csq = 'ANN'
                 except KeyError:
                     raise HeaderError("No CSQ or ANN field in INFO header - "+
