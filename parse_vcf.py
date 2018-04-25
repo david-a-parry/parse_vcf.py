@@ -347,11 +347,11 @@ class VcfHeader(object):
 
         if self.__csq_fields is None:
             try:
-                csq_header = self.metadata['INFO']['CSQ'][0]
+                csq_header = self.metadata['INFO']['CSQ'][-1]
                 csq = 'CSQ'
             except KeyError:
                 try:
-                    csq_header = self.metadata['INFO']['ANN'][0]
+                    csq_header = self.metadata['INFO']['ANN'][-1]
                     csq = 'ANN'
                 except KeyError:
                     raise HeaderError("No CSQ or ANN field in INFO header - "+
@@ -365,7 +365,7 @@ class VcfHeader(object):
                                 + "header. Unable to retrieve consequence "
                                 + "annotations.")
         return self.__csq_fields
-    
+
     @csq_fields.setter
     def csq_fields(self, csq):
         self.__csq_fields = csq
