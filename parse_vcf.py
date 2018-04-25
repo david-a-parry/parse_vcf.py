@@ -82,16 +82,16 @@ COMMON_FORMAT = {
 }
 
 class VcfReader(object):
-    """ 
-        A class for parsing Variant Call Format (VCF) files. Stores 
+    """
+        A class for parsing Variant Call Format (VCF) files. Stores
         header information as a VcfHeader object in self.header and an
-        iterable variant parser (returning VcfRecord objects) in 
+        iterable variant parser (returning VcfRecord objects) in
         self.parser.
 
-        If your input is compressed and indexed, you may iterate over 
-        genomic regions instead of processing through the file line by 
-        line. 
-        
+        If your input is compressed and indexed, you may iterate over
+        genomic regions instead of processing through the file line by
+        line.
+
         Examples:
             #process line by line
             >>> v = VcfReader('path/to/my/input.vcf')
@@ -105,30 +105,30 @@ class VcfReader(object):
             ... #do something with each record
 
     """
-    
-    def __init__(self, filename, compressed=None, bcf=None, 
+
+    def __init__(self, filename, compressed=None, bcf=None,
                  encoding='utf-8'):
-        """ 
+        """
             Create a new VcfReader object
- 
-            Opens the given VCF file and stores the metaheader and 
+
+            Opens the given VCF file and stores the metaheader and
             sample information
 
             Args:
                 filename:   VCF file to open. Required.
-                
-                compressed: Boolean indicating whether input should be treated 
-                            as bgzip compressed data. If not provided, this 
+
+                compressed: Boolean indicating whether input should be treated
+                            as bgzip compressed data. If not provided, this
                             will be inferred from the file extension.
 
-                bcf:        Boolean indicating whether the input is from a BCF 
-                            file. If not provided, this will be inferred from 
+                bcf:        Boolean indicating whether the input is from a BCF
+                            file. If not provided, this will be inferred from
                             the file extension.
 
                 encoding:   Encoding of input data. Default = 'utf-8'.
 
         """
-        
+
         self.filename = filename
         self.compressed = compressed
         self.bcf = bcf
@@ -140,10 +140,10 @@ class VcfReader(object):
             self.compressed = filename.endswith((".gz", ".bgz"))
         if self.bcf:
             if pysam is None:
-                raise ParseError("pysam not available. Please install (e.g. " + 
+                raise ParseError("pysam not available. Please install (e.g. " +
                                  "via 'pip install pysam' to parse bcf files")
             self.file = pysam.VariantFile(filename)
-            self.reader = (rec.__str__().rstrip() for rec 
+            self.reader = (rec.__str__().rstrip() for rec
                            in self.file.fetch() if rec.__str__().rstrip())
             head = self.file.header.__str__().split("\n")
             head.pop()
@@ -162,7 +162,7 @@ class VcfReader(object):
                 if filename == '-':
                     self.file = sys.stdin
                 else:
-                    self.file = open(filename, encoding=encoding, 
+                    self.file = open(filename, encoding=encoding,
                                      errors='replace', mode='r')
             self.reader = (line.rstrip() for line in self.file if line.rstrip())
             self.header = self._read_header()
@@ -177,8 +177,8 @@ class VcfReader(object):
         self.parser      = (VcfRecord(line, self,) for line in self.reader)
 
     def _read_header(self):
-        """ 
-            Called after opening VCF. This reads the meta header lines 
+        """
+            Called after opening VCF. This reads the meta header lines
             into a list, gets columns names and sample names
         """
 
@@ -191,28 +191,28 @@ class VcfReader(object):
                 coln_header = line.split("\t")
                 break
             else:
-                raise HeaderError('No column header found for VCF {}' 
+                raise HeaderError('No column header found for VCF {}'
                                   .format(self.filename))
         return VcfHeader(meta_header, coln_header)
-     
+
     def set_region(self, chrom, start=None, end=None):
-        """ 
-            Retrieve records by genomic location rather than reading 
+        """
+            Retrieve records by genomic location rather than reading
             records line-by-line.
 
-            Sets self.reader and self.parser to iterators over the 
+            Sets self.reader and self.parser to iterators over the
             records retrieved.
 
             Args:
-                chrom: chromosome or contig name. Required. You may 
-                       instead provide a region in format 
-                       'chr:start-end' if preferred instead of using 
-                       start/end arguments below. 
+                chrom: chromosome or contig name. Required. You may
+                       instead provide a region in format
+                       'chr:start-end' if preferred instead of using
+                       start/end arguments below.
 
                 start: start position on chromosome/contig. 0-based
                        Default = None
 
-                end:   end position on chromosome/contig. 
+                end:   end position on chromosome/contig.
                        Default = None
 
             >>> v = VcfReader(my_vcf)
@@ -233,14 +233,14 @@ class VcfReader(object):
         if (self.compressed):
             if not self._tabix:
                 if not pysam:
-                    raise ParseError("pysam not available. Please install " + 
-                                     "(e.g. via 'pip install pysam' to " + 
+                    raise ParseError("pysam not available. Please install " +
+                                     "(e.g. via 'pip install pysam' to " +
                                      "search by location on bgzip compressed" +
                                      "VCFs.")
                 idx = self.filename + '.tbi'
                 if not os.path.isfile(idx):   #create index if it doesn't exist
                     pysam.tabix_index(self.filename, preset="vcf")
-                self._tabix = pysam.Tabixfile(self.filename, 
+                self._tabix = pysam.Tabixfile(self.filename,
                                               encoding=self.encoding)
             try:
                 self.reader = self._tabix.fetch(str(chrom), start, end)
@@ -258,7 +258,7 @@ class VcfReader(object):
 
 class VcfHeader(object):
     ''' Header class storing metadata and sample information for a vcf '''
-    
+
     _meta_re = re.compile(r"""\#\#(\S+?)=(.*)""")  #should capture any metadata
 
     _dict_re = re.compile(r"""                 #for capturing dict-key metadata
@@ -270,8 +270,8 @@ class VcfHeader(object):
     _subd_re = re.compile(r"""                 #for extracting keys/values from
                                                #group(3) of _dict_re.match()
                           ,(\S+?)=             #get key
-                          (".+?"|[^\s,]+)      #value can either be quoted or 
-                                               #else should be all non-comma 
+                          (".+?"|[^\s,]+)      #value can either be quoted or
+                                               #else should be all non-comma
                                                #and non-whitespace chars
                          """, re.X)
 
@@ -284,12 +284,12 @@ class VcfHeader(object):
                        'ALT'    : ["Description"],
                      }
     __slots__ = ['meta_header', 'col_header', 'samples', 'sample_cols',
-                 'metadata', 'fileformat', '__csq_label', '__csq_fields', 
+                 'metadata', 'fileformat', '__csq_label', '__csq_fields',
                  '_info_field_translater', '_format_field_translater', ]
 
 
     def __init__(self, meta_header, col_header):
-        ''' 
+        '''
             Requires a list of metaheader lines and a list of column
             names
         '''
@@ -323,9 +323,9 @@ class VcfHeader(object):
 
     @property
     def csq_label(self):
-        ''' 
-            String labelling the INFO field label of VEP consequence 
-            annotations. Will raise a HeaderError if access is attempted 
+        '''
+            String labelling the INFO field label of VEP consequence
+            annotations. Will raise a HeaderError if access is attempted
             but no VEP CSQ or ANN field is present in the header.
         '''
         if self.__csq_label is None:
@@ -338,10 +338,10 @@ class VcfHeader(object):
 
     @property
     def csq_fields(self):
-        ''' 
+        '''
             A list of CSQ field names in the order they are represented
-            in CSQ INFO field entries. Set to None on initialization. 
-            Will raise a HeaderError if access is attempted but no VEP 
+            in CSQ INFO field entries. Set to None on initialization.
+            Will raise a HeaderError if access is attempted but no VEP
             CSQ or ANN field is present in the header.
         '''
 
@@ -371,8 +371,8 @@ class VcfHeader(object):
         self.__csq_fields = csq
 
     def _parse_metadata(self):
-        ''' 
-            Extract INFO, FORMAT, FILTER and contig information from VCF 
+        '''
+            Extract INFO, FORMAT, FILTER and contig information from VCF
             meta header and store in dicts
         '''
 
@@ -391,13 +391,13 @@ class VcfHeader(object):
                 for field in self.metadata[field_type]:
                     self._set_field_translation(field_type, field)
             except KeyError:
-                if field_type == 'INFO': 
+                if field_type == 'INFO':
                     #no FORMAT field in header is common - e.g. sites only VCFs
-                    warnings.warn("No '{}' field in header!" 
+                    warnings.warn("No '{}' field in header!"
                                   .format(field_type), stacklevel=5)
 
     def _parse_header_line(self, h):
-        ''' 
+        '''
             Parse a metaheader line and assign to self.metadata dict where
             keys are the type of metadata line and values are dicts of IDs to
             lists of either dicts of key-value pairs or string values.
@@ -436,7 +436,7 @@ class VcfHeader(object):
             for k in self._required_keys[field]:
                 if not k in last:
                     raise HeaderError(
-                            "Missing required key '{}' in metaheader line: {}" 
+                            "Missing required key '{}' in metaheader line: {}"
                             .format(k, h))
 
     def _set_field_translation(self, field_type, field):
@@ -454,7 +454,7 @@ class VcfHeader(object):
         elif f['Type'] == 'Integer':
             ctype = int
         elif f['Type'] != 'Flag':
-            raise ParseError("Unrecognised FORMAT Type '{}' in header" 
+            raise ParseError("Unrecognised FORMAT Type '{}' in header"
                              .format(f['Type']))
         split = False
         if f['Number'].isdigit():
@@ -463,7 +463,7 @@ class VcfHeader(object):
         else:              #if not digit should be 'A', 'G', 'R' or '.' - split
             split = True
         if field_type == 'INFO':
-            setter = self._info_field_translater    
+            setter = self._info_field_translater
         elif field_type == 'FORMAT':
             setter = self._format_field_translater
         else:
@@ -471,7 +471,7 @@ class VcfHeader(object):
                              "field type for translation")
         setter[field] = (ctype, split)
 
-    def add_header_field(self, name, string=None, field_type=None, 
+    def add_header_field(self, name, string=None, field_type=None,
                        dictionary=None):
         '''
             Add a header field with given name and optional field type,
@@ -482,21 +482,21 @@ class VcfHeader(object):
 
                 string: string to add to field. Ignored if 'dictionary'
                         is provided.
-    
+
                 field_type:
-                        type of field - e.g. if INFO/FILTER/FORMAT 
+                        type of field - e.g. if INFO/FILTER/FORMAT
                         field. Required if providing a dictionary.
 
                 dictionary:
-                        a dict of keys to values for the given field. 
-                        If 'field_type' is specified, this arg must be 
+                        a dict of keys to values for the given field.
+                        If 'field_type' is specified, this arg must be
                         provided and must contain all the essential keys
-                        for that field type. For example, an 'INFO' 
-                        field must have 'Number', 'Type', and 
+                        for that field type. For example, an 'INFO'
+                        field must have 'Number', 'Type', and
                         'Description' keys.
 
         '''
-        
+
         if dictionary is None and string is None:
             raise Exception("Either dictionary or string argument is required")
         if field_type is not None and field_type in self._required_keys:
@@ -519,7 +519,7 @@ class VcfHeader(object):
                     try:
                         h_vals.append(k + "=" + dictionary[k])
                     except KeyError:
-                        raise Exception("Header type '{}'".format(field_type) + 
+                        raise Exception("Header type '{}'".format(field_type) +
                                         " requires '{}' field." .format(k))
                 #then append any additional keys
                 for k in dictionary:
@@ -529,7 +529,7 @@ class VcfHeader(object):
             else:
                 for k in dictionary:
                     h_vals.append(k + "=" + dictionary[k])
-            h_string = str.join(',', ['##' + field_type + "=<ID=" + name] + 
+            h_string = str.join(',', ['##' + field_type + "=<ID=" + name] +
                                 h_vals) + ">"
         else:
             h_string = '##' + name + '=' + string
@@ -541,8 +541,8 @@ class VcfHeader(object):
 
 
 class VcfRecord(object):
-    ''' 
-        A single record from a Vcf created by parsing a non-header line 
+    '''
+        A single record from a Vcf created by parsing a non-header line
         from a VCF file. May contain multiple alternate alleles.
     '''
 
@@ -551,24 +551,24 @@ class VcfRecord(object):
         #group 1 gives VEP CSQ allele
     _gt_splitter = re.compile(r'[\/\|]')
 
-    __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
-                 'FILTER', 'INFO', 'FORMAT', '__SPAN', '__CSQ', 'samples',  
-                 '_sample_idx', '__CALLS', '__ALLELES', '__DECOMPOSED_ALLELES', 
-                 '__INFO_FIELDS',  'GT_FORMAT', '_SAMPLE_GTS', '_got_gts', 
+    __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL',
+                 'FILTER', 'INFO', 'FORMAT', '__SPAN', '__CSQ', 'samples',
+                 '_sample_idx', '__CALLS', '__ALLELES', '__DECOMPOSED_ALLELES',
+                 '__INFO_FIELDS',  'GT_FORMAT', '_SAMPLE_GTS', '_got_gts',
                  '_vep_allele', '_parsed_info', '_parsed_gts']
 
     def __init__(self, line, caller):
-        ''' 
-            VcfRecord objects require a line and a related VcfReader 
+        '''
+            VcfRecord objects require a line and a related VcfReader
             object for initialization.
 
             Args:
-                line:   a non-header line from a VCF file without 
+                line:   a non-header line from a VCF file without
                         newline character
-                
-                caller: a VcfReader object (normally the same VcfReader 
-                        object that read the input line). Metadata and 
-                        sample information will be read from this object 
+
+                caller: a VcfReader object (normally the same VcfReader
+                        object that read the input line). Metadata and
+                        sample information will be read from this object
                         in order to initialize the VcfRecord object.
 
         '''
@@ -577,8 +577,8 @@ class VcfRecord(object):
                                         #splitting whole line on a VCF with
                                         #lots of columns/samples is costly
         try:
-            ( self.CHROM, pos, self.ID, self.REF, self.ALT,  
-              qual, self.FILTER, self.INFO ) = self.cols[:8] 
+            ( self.CHROM, pos, self.ID, self.REF, self.ALT,
+              qual, self.FILTER, self.INFO ) = self.cols[:8]
         except ValueError as err:
             if len(self.cols) < 8:
                 raise ParseError("Not enough columns for following line:\n{}"
@@ -603,7 +603,7 @@ class VcfRecord(object):
         self._vep_allele        = {}
         self._parsed_info       = {}
         self._parsed_gts        = defaultdict(dict)
-        self._got_gts           = False  #flag indicating whether we've already 
+        self._got_gts           = False  #flag indicating whether we've already
                                          #retrieved GT dicts for every sample
 
         if len(self.cols) > 8:
@@ -611,25 +611,25 @@ class VcfRecord(object):
             self.GT_FORMAT = self.FORMAT.split(':')
 
     def __str__(self):
-        ''' 
+        '''
             Represent the VCF line as it should appear as a VCF record.
-            This uses the values stored in self.cols to avoid 
+            This uses the values stored in self.cols to avoid
             potentially needless splitting of sample calls.
         '''
         return str.join("\t", self.cols)
 
     def add_ids(self, ids, replace=False):
         '''
-            Adds given IDs to the ID field of the VCF record. If the 
-            record already has an ID (i.e. is not '.') these IDs are 
-            added to the existing value(s) unless the replace 
+            Adds given IDs to the ID field of the VCF record. If the
+            record already has an ID (i.e. is not '.') these IDs are
+            added to the existing value(s) unless the replace
             argument is True.
-        
+
             Args:
                 ids:     A list of IDs to add.
 
-                replace: If True, existing ID values are replaced, 
-                         otherwise the given IDs are added to. 
+                replace: If True, existing ID values are replaced,
+                         otherwise the given IDs are added to.
                          Default = False.
 
         '''
@@ -638,9 +638,9 @@ class VcfRecord(object):
         else:
             uids = set(ids + self.ID.split(';'))
             self.ID = str.join(';', uids)
-        self.cols[2] = self.ID     #also change cols so is reflected in __str__ 
-        
-            
+        self.cols[2] = self.ID     #also change cols so is reflected in __str__
+
+
 
     @property
     def ALLELES(self):
@@ -649,15 +649,15 @@ class VcfRecord(object):
         if self.__ALLELES is None:
             self.__ALLELES = [self.REF] + self.ALT.split(',')
         return self.__ALLELES
-        
+
     @ALLELES.setter
     def ALLELES(self, alleles):
         self.__ALLELES = alleles
-    
+
     @property
     def DECOMPOSED_ALLELES(self):
-        ''' 
-            list of AltAllele objects, one for each ALT allele in 
+        '''
+            list of AltAllele objects, one for each ALT allele in
             order, after reducing them to their minimal representations
             (i.e. by trimming redundant nucleotides).
         '''
@@ -665,7 +665,7 @@ class VcfRecord(object):
         if self.__DECOMPOSED_ALLELES is None:
             self._minimize_alleles()
         return self.__DECOMPOSED_ALLELES
-        
+
     @DECOMPOSED_ALLELES.setter
     def DECOMPOSED_ALLELES(self, alleles):
         self.__DECOMPOSED_ALLELES = alleles
@@ -688,18 +688,18 @@ class VcfRecord(object):
                     pos += 1
                 else:
                     break
-            self.DECOMPOSED_ALLELES.append(AltAllele(chrom=self.CHROM, 
+            self.DECOMPOSED_ALLELES.append(AltAllele(chrom=self.CHROM,
                                             pos=pos, ref=ref, alt=alt))
-     
-                
 
-    @property 
+
+
+    @property
     def INFO_FIELDS(self):
-        ''' 
-        A dict of INFO field names to values. All returned values are Strings 
+        '''
+        A dict of INFO field names to values. All returned values are Strings
         except for Flags which are assigned True.
 
-        To obtain values parsed into the appropriate Type as defined by the 
+        To obtain values parsed into the appropriate Type as defined by the
         VCF header, use the 'parsed_info_fields()' method.
         '''
         if self.__INFO_FIELDS is None:
@@ -717,22 +717,22 @@ class VcfRecord(object):
         self.__INFO_FIELDS = i
 
     def add_info_fields(self, info, append_existing=False):
-        ''' 
-            Requires a dict of INFO field names to a list of values. 
-            Adds or replaces existing INFO fields in the record with 
+        '''
+            Requires a dict of INFO field names to a list of values.
+            Adds or replaces existing INFO fields in the record with
             the items in given dict.
 
             Args:
-                info: A dict of INFO field names to add with values 
+                info: A dict of INFO field names to add with values
                       being list of values for the given field.
 
                 append_existing:
                       Add values to existing INFO fields in a record.
                       If the field being added already exists and this
-                      argument is True, the values provided will be 
-                      added to the existing values. If the Number 
-                      property is a fixed value, multiple values at the 
-                      same index will be separated by '|' characters. 
+                      argument is True, the values provided will be
+                      added to the existing values. If the Number
+                      property is a fixed value, multiple values at the
+                      same index will be separated by '|' characters.
                       Otherwise they will be separated by commas.
                       Default = False.
 
@@ -745,7 +745,7 @@ class VcfRecord(object):
         self._rewrite_info_string()
 
     def _append_to_existing_info(self, field, values):
-        
+
         if field in self.header.metadata['INFO']:
             if self.header.metadata['INFO'][field][-1]['Type'] == 'Flag':
                 self.INFO_FIELDS[field] = True
@@ -759,35 +759,35 @@ class VcfRecord(object):
         old = self.INFO_FIELDS[field].split(",")
         new = str(values).split(",")
         if (len(old) != len(new)):
-            raise ParseError("New {} INFO field '{}'" .format(field, values) + 
-                             "has differing number of values to existing " + 
-                             "field '{}'" .format(self.INFO_FIELDS[field])) 
-        self.INFO_FIELDS[field] = str.join(",", (str.join("|", x) for x in 
+            raise ParseError("New {} INFO field '{}'" .format(field, values) +
+                             "has differing number of values to existing " +
+                             "field '{}'" .format(self.INFO_FIELDS[field]))
+        self.INFO_FIELDS[field] = str.join(",", (str.join("|", x) for x in
                                                                 zip(old, new)))
 
     def _rewrite_info_string(self):
         info = []
         for f,v in self.INFO_FIELDS.items():
             if isinstance(v, bool): #is Flag
-                info.append(f) 
+                info.append(f)
             if isinstance(v, list): #join list values with commas
-                info.append(f + '=' + str.join(',', [str(x) for x in v])) 
+                info.append(f + '=' + str.join(',', [str(x) for x in v]))
             else:
-                info.append(f + '=' + str(v)) 
+                info.append(f + '=' + str(v))
         self.INFO = str.join(';', info)
-        self.cols[7] = self.INFO #also change cols so is reflected in __str__ 
-                
-        
+        self.cols[7] = self.INFO #also change cols so is reflected in __str__
+
+
 
     def parsed_info_fields(self, fields=None):
         if fields is not None:
             f_list = [x for x in fields if x in self.INFO_FIELDS]
         else:
             f_list = list(self.INFO_FIELDS)
-        d = dict( (f, self._get_parsed_info_value(f, self.INFO_FIELDS[f])) 
+        d = dict( (f, self._get_parsed_info_value(f, self.INFO_FIELDS[f]))
                                                        for f in f_list)
         return d
-            
+
     def _get_parsed_info_value(self, field, value):
         try:
             return self._parsed_info[field]
@@ -797,19 +797,19 @@ class VcfRecord(object):
             f = self.header._info_field_translater[field]
         except KeyError:
             try:
-                f = (COMMON_INFO[field]['Class'], 
+                f = (COMMON_INFO[field]['Class'],
                      COMMON_INFO[field]['Split'])
                 self.header._info_field_translater[field] = f
             except KeyError:
-                raise ParseError("Unrecognised INFO field '{}'".format(field) 
-                                 + "at {}:{}. ".format(self.CHROM, self.POS) + 
-                                 "Non-standard  INFO fields should be " + 
+                raise ParseError("Unrecognised INFO field '{}'".format(field)
+                                 + "at {}:{}. ".format(self.CHROM, self.POS) +
+                                 "Non-standard  INFO fields should be " +
                                  "represented in VCF header.")
         #f[0] is the class type of field, f[1] = True if values should be split
         if f[0] is None: #is a Flag
             pv = True
-        else: 
-            try: 
+        else:
+            try:
                 conv = lambda x: None if x == '.' else f[0](x)
                 if f[1]:
                     if isinstance(value, str):
@@ -825,10 +825,10 @@ class VcfRecord(object):
                                  " {}:{}" .format(self.CHROM, self.POS))
         self._parsed_info[field] = pv
         return pv
-            
+
     @property
     def SPAN(self):
-        ''' Returns end position of a record according to END INFO 
+        ''' Returns end position of a record according to END INFO
             field if available, or otherwise POS + len(REF) -1.
         '''
         if self.__SPAN == None:
@@ -846,14 +846,14 @@ class VcfRecord(object):
     def CALLS(self):
         '''
             split sample call fields and assign to self.CALLS dict of
-            sample id to call string. 
+            sample id to call string.
 
-            self.CALLS does not get created in __init__ to save on 
-            overhead in VCF with many samples where we might not be 
-            interested in parsing sample calls 
-            
+            self.CALLS does not get created in __init__ to save on
+            overhead in VCF with many samples where we might not be
+            interested in parsing sample calls
+
             As of python 3.6 the CALLS dict will maintain sample order,
-            but to safely get a list of calls in the same order as the 
+            but to safely get a list of calls in the same order as the
             input VCF the following syntax should be used:
 
             >>> v = VcfReader(my_vcf)
@@ -866,23 +866,23 @@ class VcfRecord(object):
             if self.header.sample_cols:
                 calls = self.cols.pop()
                 self.cols.extend(calls.split("\t"))
-                self.__CALLS = dict([(s, self.cols[self.header.sample_cols[s]]) 
-                                      for s in self.header.samples]) 
+                self.__CALLS = dict([(s, self.cols[self.header.sample_cols[s]])
+                                      for s in self.header.samples])
             else:
                 self.__CALLS = {}
         return self.__CALLS
-    
+
     @CALLS.setter
     def CALLS(self, calls):
         self.__CALLS = calls
-     
+
     def sample_calls(self):
-        ''' 
+        '''
             Retrieve a dict of sample names to a dict of genotype field
-            names to values. All returned values are strings. For 
+            names to values. All returned values are strings. For
             values cast to the appropriate types (int/float/string/list)
             use the 'parsed_gts' function.
-            
+
             >>> record.sample_calls()
             {'Sample_1': {'GT': '0/0', 'AD': '10,0', 'DP': '10', 'GQ': '30'},
             'Sample_2': {'GT': '0/1', 'AD': '6,6', 'DP': '12', 'GQ': '33'}}
@@ -891,7 +891,7 @@ class VcfRecord(object):
             >>> s1 = d['Sample_1']
             >>> s1['GQ']
             '30'
-            
+
             ...or more concisely:
 
             >>> record.sample_calls()['Sample_1']['GQ']
@@ -903,31 +903,31 @@ class VcfRecord(object):
         else:
             self._got_gts = True
             #get_sample_call() sets self._SAMPLE_GTS[s] for future use
-            return dict([(s, self.get_sample_call(s)) 
-                          for s in self.header.samples ]) 
+            return dict([(s, self.get_sample_call(s))
+                          for s in self.header.samples ])
 
 
 
     def get_sample_call(self, sample):
-        ''' 
-            Retrieve a dict of genotype field names to values for a 
-            single sample.  
-       
-            This method creates dicts as needed for given samples, so 
-            may be more efficient than using the 'sample_calls()' 
-            method when parsing a VCF with many samples and you are 
-            only interested in a information from a small number of 
+        '''
+            Retrieve a dict of genotype field names to values for a
+            single sample.
+
+            This method creates dicts as needed for given samples, so
+            may be more efficient than using the 'sample_calls()'
+            method when parsing a VCF with many samples and you are
+            only interested in a information from a small number of
             these samples.
-            
-            All values returned are strings. For values cast to an 
-            appropriate type (int/float/string/list) use the 
+
+            All values returned are strings. For values cast to an
+            appropriate type (int/float/string/list) use the
             'parsed_gts(sample=[sample])' function.
-           
+
             Args:
-                sample: name of the sample to retrieve (as it appears 
+                sample: name of the sample to retrieve (as it appears
                         in the VCF header
 
-            Example: 
+            Example:
                 >>> s1 = record.get_sample_call('Sample_1')
                 >>> s1
                 {'GT': '0/0', 'AD': '10,0', 'DP': '10', 'GQ': '30'}
@@ -939,7 +939,7 @@ class VcfRecord(object):
             return self._SAMPLE_GTS[sample]
         except KeyError:
             if sample in self.CALLS:
-                d = dict( [(f, v) for (f, v) in zip(self.GT_FORMAT, 
+                d = dict( [(f, v) for (f, v) in zip(self.GT_FORMAT,
                                             (self.CALLS[sample].split(':')))] )
                 self._SAMPLE_GTS[sample] = d
                 if len(self._SAMPLE_GTS) == len(self.header.samples):
@@ -952,37 +952,37 @@ class VcfRecord(object):
                 raise ParseError("Sample {} is not in VCF" .format(sample))
 
     def parsed_gts(self, samples=None, fields=None):
-        ''' Returns a dict of GT field names to dicts of sample names 
-            to values. By default, values for all samples and fields 
-            will be retrieved, but a list of sample IDs and a list of 
+        ''' Returns a dict of GT field names to dicts of sample names
+            to values. By default, values for all samples and fields
+            will be retrieved, but a list of sample IDs and a list of
             FORMAT fields to retrieve can be given.
 
             Missing values will be assigned to None.
-    
-            Because this is a relatively costly function, you are 
-            advised to avoid calling this repeatedly for a single 
-            record - you may speed things up by only calling for a 
-            subset of samples and fields but in any case you probably 
-            want to call this function once only per record, storing 
+
+            Because this is a relatively costly function, you are
+            advised to avoid calling this repeatedly for a single
+            record - you may speed things up by only calling for a
+            subset of samples and fields but in any case you probably
+            want to call this function once only per record, storing
             the results in a variable.
 
             Args:
-                samples: Optional list of sample names to retrieve 
-                         values for. Default = None (values retrieved 
+                samples: Optional list of sample names to retrieve
+                         values for. Default = None (values retrieved
                          for all samples)
-                                
-                fields:  Optional list of field names (as they appear 
-                         in the FORMAT field of the record) to retrieve 
-                         values for. Default = None (values retrieved 
+
+                fields:  Optional list of field names (as they appear
+                         in the FORMAT field of the record) to retrieve
+                         values for. Default = None (values retrieved
                          for all fields)
-                                
-            
+
+
             >>> record.parsed_gts()
             {'GT': {'Sample_1': (0, 0), 'Sample_2': (0, 1)},
             'AD': {'Sample_1': (10, 0), 'Sample_2': (6, 6)},
             'DP': {'Sample_1': 10, 'Sample_2': 12},
             'GQ': {'Sample_1': 30, 'Sample_2': 33}}
-            
+
             >>> record.parsed_gts(samples=['Sample_2'])
             {'GT': {'Sample_2': (0, 1)}, 'AD': {'Sample_2': (6, 6)},
             'DP': {'Sample_2': 12}, 'GQ': {'Sample_2': 33}}
@@ -992,7 +992,7 @@ class VcfRecord(object):
             'GQ': {'Sample_1': 30, 'Sample_2': 33}}
 
         '''
-    
+
         d = defaultdict(dict)
         if fields is not None:
             f_list = fields
@@ -1005,7 +1005,7 @@ class VcfRecord(object):
         updated = False
         for f in f_list:
             if f in self._parsed_gts:
-                missing_samps = [s for s in s_list if s not in 
+                missing_samps = [s for s in s_list if s not in
                                                            self._parsed_gts[f]]
                 if not missing_samps:
                     d[f] = self._parsed_gts[f]
@@ -1013,65 +1013,65 @@ class VcfRecord(object):
                 else:
                     updated = True
                     if missing_samps != s_list: #some missing samps,but not all
-                        d[f].update(dict((s, self._parsed_gts[f][s]) for s in 
+                        d[f].update(dict((s, self._parsed_gts[f][s]) for s in
                                     s_list if s in self._parsed_gts[f]))
-                    d[f].update(dict(zip(missing_samps, 
+                    d[f].update(dict(zip(missing_samps,
                                 self._get_parsed_gt_fields(f,
-                                (self.sample_calls()[s][f] if f in 
-                                self.sample_calls()[s] else None 
+                                (self.sample_calls()[s][f] if f in
+                                self.sample_calls()[s] else None
                                 for s in missing_samps)))))
-                    
+
             else:
                 updated = True
                 d[f] = dict(zip(s_list, self._get_parsed_gt_fields(f,
-                            (self.sample_calls()[s][f] if f in 
-                            self.sample_calls()[s] else None 
+                            (self.sample_calls()[s][f] if f in
+                            self.sample_calls()[s] else None
                             for s in s_list) ) ) )
         if updated:
             for f in f_list:
                 self._parsed_gts[f].update(d[f])
         return d
-        
+
     def _get_parsed_gt_fields(self, field, values=[]):
         #TODO - make this more efficient with a cython extension
         '''
-            Retrieves values of genotype field parsed so that the 
+            Retrieves values of genotype field parsed so that the
             returned values are of the expected type (str, int or float)
-            and are split into list format if appropriate. Fields are 
-            handled according to the information present in the VCF 
-            header metadata 
+            and are split into list format if appropriate. Fields are
+            handled according to the information present in the VCF
+            header metadata
 
             Args:
-                field:  genotype field to retrieve as it appears in the 
-                        FORMAT field of the VCF record and in the VCF 
+                field:  genotype field to retrieve as it appears in the
+                        FORMAT field of the VCF record and in the VCF
                         header.
 
                 values: list of values from a genotype field
         '''
-        
+
         try:
             f = self.header._format_field_translater[field]
         except KeyError:
             try:
-                f = (COMMON_FORMAT[field]['Class'], 
+                f = (COMMON_FORMAT[field]['Class'],
                      COMMON_FORMAT[field]['Split'])
                 self.header._format_field_translater[field] = f
             except KeyError:
-                raise ParseError("Unrecognised FORMAT field '{}'".format(field) 
-                                 + "at {}:{}. ".format(self.CHROM, self.POS) + 
-                                 "Non-standard  FORMAT fields should be " + 
+                raise ParseError("Unrecognised FORMAT field '{}'".format(field)
+                                 + "at {}:{}. ".format(self.CHROM, self.POS) +
+                                 "Non-standard  FORMAT fields should be " +
                                  "represented in VCF header.")
         #f[0] is the class type of field, f[1] = True if values should be split
         pv = []
         for val in values:
             if field == 'GT': #GT is a special case, make tuples of alleles
-                alleles = self._gt_splitter.split(val) 
+                alleles = self._gt_splitter.split(val)
                 try:
                     pv.append(tuple( int(x) for x in alleles))
                 except ValueError:
                     nocall = tuple(None for x in alleles if x == '.')
                     if not nocall:
-                        raise ParseErrror("Could not parse GT {}" 
+                        raise ParseErrror("Could not parse GT {}"
                                           .format(val) + " at {}:{}" .format(
                                           self.CHROM, self.POS))
                     pv.append(nocall)
@@ -1089,21 +1089,21 @@ class VcfRecord(object):
                             pv.append(None)
                     else:
                         raise err
-                        raise ParseError("Unexpected value ('{}')" .format(val) 
-                                       + " for {} " .format(field) + "FORMAT "  
-                                       + "field at {}:{}" .format(self.CHROM, 
+                        raise ParseError("Unexpected value ('{}')" .format(val)
+                                       + " for {} " .format(field) + "FORMAT "
+                                       + "field at {}:{}" .format(self.CHROM,
                                          self.POS))
         return pv
 
 
     @property
     def CSQ(self):
-        ''' 
+        '''
             A list of dicts of CSQ/ANN annotations from VEP to values.
-            Empty values are represented by empty Strings. Will raise 
+            Empty values are represented by empty Strings. Will raise
             a HeaderError if the associated VCF header does not contain
-            CSQ/ANN information and a ParseError if the record being 
-            parsed does not contain a CSQ/ANN annotation in the INFO 
+            CSQ/ANN information and a ParseError if the record being
+            parsed does not contain a CSQ/ANN annotation in the INFO
             field.
         '''
         if self.__CSQ is None:
@@ -1117,8 +1117,8 @@ class VcfRecord(object):
             self.__CSQ = []
             alleleToNum = {}
             for c in csqs:
-                d = OrderedDict([(k,v) for (k, v) in zip(self.header.csq_fields, 
-                                                              c.split('|'))]) 
+                d = OrderedDict([(k,v) for (k, v) in zip(self.header.csq_fields,
+                                                              c.split('|'))])
                 if len(self.ALLELES) == 2: #only one ALT allele
                     d['alt_index'] = 1
                 elif 'ALLELE_NUM' in d:
@@ -1131,7 +1131,7 @@ class VcfRecord(object):
     @CSQ.setter
     def CSQ(self, c):
         self.__CSQ = c
-        
+
     def _vep_to_alt(self, csq):
         #figure out how alleles will be handled by looking at the REF vs ALTs
         allele = csq['Allele']
@@ -1177,29 +1177,29 @@ class VcfRecord(object):
                     else:
                         is_indel = True
                     if is_indel:
-                        # special case for longer non SV type 'deletion' 
-                        # 'insertion' or 'duplication' alleles which VEP 
-                        # sometimes annotates as deletion/insertion/duplication 
+                        # special case for longer non SV type 'deletion'
+                        # 'insertion' or 'duplication' alleles which VEP
+                        # sometimes annotates as deletion/insertion/duplication
                         # despite presence of REF/ALT sequences
                         if allele == 'deletion' and  len(alt) < len(ref):
-                            self._vep_allele[allele] = i 
+                            self._vep_allele[allele] = i
                             return i
                         elif allele == 'insertion' and  len(alt) > len(ref):
-                            self._vep_allele[allele] = i 
+                            self._vep_allele[allele] = i
                             return i
                         elif allele == 'duplication' and  len(alt) > len(ref):
-                            self._vep_allele[allele] = i 
+                            self._vep_allele[allele] = i
                             return i
                     self._vep_allele[alt] = i
-                
+
         if is_sv:
-            #no more editing required as long as 
+            #no more editing required as long as
             #not at the same site as short variant
             if is_snv or is_mnv or is_indel:
                 raise ParseError("Unable to parse structural variants at the "
                                + "same site as a non-structural variant")
         else:
-            if not is_snv and (is_indel or 
+            if not is_snv and (is_indel or
                                (is_mnv and asterisk) #go home VEP, you're drunk
             ):
                 #VEP trims first base unless REF and ALT differ at first base
@@ -1209,10 +1209,10 @@ class VcfRecord(object):
                     if alt != '*':
                         alt_start = alt[:1]
                         if alt_start != ref_start:
-                            first_base_differs = True 
+                            first_base_differs = True
                             break
                 if not first_base_differs:
-                    #no trimming if first base differs for any ALT, 
+                    #no trimming if first base differs for any ALT,
                     #otherwise first base is trimmed
                     trimmed = {}
                     pop = []
@@ -1231,10 +1231,10 @@ class VcfRecord(object):
         return self._vep_allele[allele]
 
     def in_cis_with(self, sample, allele, other, other_allele):
-        ''' 
+        '''
             Returns True if the two alleles are physically phased
             according to the PID and PGT fields of both records.
-        
+
             Args:
                 sample: Sample ID to check phasing data for.
 
@@ -1255,7 +1255,7 @@ class VcfRecord(object):
             pid2 = other.sample_calls()[sample]['PID']
             pgt1 = self.sample_calls()[sample]['PGT']
             pgt2 = other.sample_calls()[sample]['PGT']
-        except KeyError:    
+        except KeyError:
             #when joining VCFs together only some samples may have PID/PGT
             return False
         if pid1 != pid2:
@@ -1268,62 +1268,62 @@ class VcfRecord(object):
             return phase1 == phase2
         except ValueError: #allele might not be in phase group
             # TODO: for some multiallelic variants I've spotted that the GT is
-            # '0/2' while the PGT is '0|1' - is this a bug in HaplotypeCaller 
+            # '0/2' while the PGT is '0|1' - is this a bug in HaplotypeCaller
             # or will the 'ALT' always be 1 in the PGT?
             return False
 
 class AltAllele(object):
     '''
-        Represents basic genomic features of a single alternative 
+        Represents basic genomic features of a single alternative
         allele call. Features are 'CHROM', 'POS', 'REF' and 'ALT'.
     '''
-    
+
     __slots__ = ['CHROM', 'POS', 'REF', 'ALT']
 
     def __init__(self, record=None, allele_index=1, chrom=None, pos=None,
                  ref=None, alt=None):
         '''
-            Either created from a given VcfRecord and the index of the 
-            allele to be represented or from chrom, pos, ref and alt 
+            Either created from a given VcfRecord and the index of the
+            allele to be represented or from chrom, pos, ref and alt
             arguments.
 
             Args:
-                record:       VcfRecord object containing the allele of     
+                record:       VcfRecord object containing the allele of
                               interest. Uses 'allele_index' argument to
                               determine the allele to represent.
 
-                allele_index: index of the allele to represent (e.g. 1 
-                              for the first ALT allele, 2 for the 
-                              second or 0 for the REF allele). 
+                allele_index: index of the allele to represent (e.g. 1
+                              for the first ALT allele, 2 for the
+                              second or 0 for the REF allele).
                               Default = 1.
 
-                chrom:        chromosome/contig (required if not using 
-                              a VcfRecord for construction, ignored 
+                chrom:        chromosome/contig (required if not using
+                              a VcfRecord for construction, ignored
                               otherwise).
 
-                pos:          position of ref allele (required if not 
-                              using a VcfRecord for construction, 
+                pos:          position of ref allele (required if not
+                              using a VcfRecord for construction,
                               ignored otherwise).
 
                 ref:          reference allele (required if not using a
-                              VcfRecord for construction, ignored 
+                              VcfRecord for construction, ignored
                               otherwise).
 
-                alt:          alternative allele (required if not using 
-                              a VcfRecord for construction, ignored 
+                alt:          alternative allele (required if not using
+                              a VcfRecord for construction, ignored
                               otherwise).
 
         '''
 
         if record is not None:
             self.CHROM = record.CHROM
-            self.POS   = record.POS    
-            self.REF   = record.REF    
+            self.POS   = record.POS
+            self.REF   = record.REF
             self.ALT   = record.ALT
         else:
             self.CHROM = chrom
-            self.POS   = pos    
-            self.REF   = ref    
+            self.POS   = pos
+            self.REF   = ref
             self.ALT   = alt
 
     def __eq__(self, other):
