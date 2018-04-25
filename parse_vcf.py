@@ -285,8 +285,7 @@ class VcfHeader(object):
                      }
     __slots__ = ['meta_header', 'col_header', 'samples', 'sample_cols',
                  'metadata', 'fileformat', '__csq_label', '__csq_fields', 
-                 '_info_field_translater', '_format_field_translater', 
-                 '_sorted_meta_header'] 
+                 '_info_field_translater', '_format_field_translater', ]
 
 
     def __init__(self, meta_header, col_header):
@@ -296,7 +295,6 @@ class VcfHeader(object):
         '''
 
         self.meta_header = meta_header
-        self._sorted_meta_header = True
         self.col_header  = col_header
         self.samples     = col_header[9:] or None
         self.sample_cols = dict([(x,i) for (i,x)
@@ -320,8 +318,6 @@ class VcfHeader(object):
         self._parse_metadata()
 
     def __str__(self):
-        if not self._sorted_meta_header:
-            self._sort_meta_header()
         return (str.join("\n", self.meta_header) + "\n" +
                 str.join("\t", self.col_header) + "\n")
 
@@ -542,25 +538,7 @@ class VcfHeader(object):
             else:
                 self.metadata[name] = [string]
         self.meta_header.append(h_string)
-        self._sorted_meta_header = False
-                         
-    def _sort_meta_header(self):
-        ''' keep FORMAT/FILTER/INFO lines together and sorted '''
-        inf_filt_form = []
-        pre_inf = []
-        post_inf = []
-        for line in self.meta_header:
-            match = re.search('^##(FORMAT|FILTER|INFO)', line)
-            if match:
-                inf_filt_form.append(line)
-            elif len(inf_filt_form):
-                post_inf.append(line)
-            else:
-                pre_inf.append(line)
-        inf_filt_form.sort()
-        self.meta_header = pre_inf + inf_filt_form + post_inf
-        self._sorted_meta_header = True
-            
+
 
 class VcfRecord(object):
     ''' 
