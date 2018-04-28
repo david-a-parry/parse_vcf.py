@@ -140,8 +140,8 @@ class VcfReader(object):
             self.compressed = filename.endswith((".gz", ".bgz"))
         if self.bcf:
             if pysam is None:
-                raise ParseError("pysam not available. Please install (e.g. " +
-                                 "via 'pip install pysam' to parse bcf files")
+                raise ImportError("pysam not available. Please install (e.g. "+
+                                  "via 'pip install pysam' to parse bcf files")
             self.file = pysam.VariantFile(filename)
             self.reader = (rec.__str__().rstrip() for rec
                            in self.file.fetch() if rec.__str__().rstrip())
