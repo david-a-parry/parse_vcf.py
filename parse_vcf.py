@@ -252,8 +252,9 @@ class VcfReader(object):
             #easy solution - compress and index with pysam if not compressed,
             #but will be slow...
             #less easy solution, implement a custom index to seek to and from
-            raise ParseError("Searching by location is not yet implemented " +
-                             "for non-bgzip compressed VCFs.")
+            raise NotImplementedError("Searching by location is not yet " +
+                                      "implemented for non-bgzip compressed" +
+                                      " VCFs.")
 
 
 class VcfHeader(object):
