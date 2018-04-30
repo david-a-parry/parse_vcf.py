@@ -72,3 +72,31 @@ def test_read_variant():
     assert_equal([gts2[x]['Sample_4'] for x in gts2],
                  [(0, 0), (7, 0), 7, 21, (0, 21, 276)])
 
+def test_identical_svs():
+    #check identical records are recognised as the same
+    vcf = VcfReader("test_data/sv_test1.vcf")
+    vcf2 = VcfReader("test_data/sv_test1.vcf")
+    for r1, r2 in zip(vcf, vcf2):
+        for a1 in r1.DECOMPOSED_ALLELES:
+            for a2 in r2.DECOMPOSED_ALLELES:
+                assert_equal(a1, a2)
+
+def test_similar_svs():
+    vcf = VcfReader("test_data/sv_test1.vcf")
+    vcf2 = VcfReader("test_data/sv_test2.vcf")
+    for r1, r2 in zip(vcf, vcf2):
+        for a1 in r1.DECOMPOSED_ALLELES:
+            for a2 in r2.DECOMPOSED_ALLELES:
+                assert_equal(a1, a2)
+
+def test_different_svs():
+    vcf = VcfReader("test_data/sv_test1.vcf")
+    vcf2 = VcfReader("test_data/sv_test3.vcf")
+    for r1, r2 in zip(vcf, vcf2):
+        for a1 in r1.DECOMPOSED_ALLELES:
+            for a2 in r2.DECOMPOSED_ALLELES:
+                assert_not_equal(a1, a2)
+
+if __name__ == '__main__':
+    import nose
+    nose.run(defaultTest = __name__)
