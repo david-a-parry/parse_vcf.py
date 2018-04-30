@@ -14,7 +14,7 @@ def test_column_error():
 
 def test_not_enough_fields_error():
     vcf = VcfReader("test_data/invalid_first_var.vcf")
-    assert_raises(ParseError, next, vcf.parser)
+    assert_raises(ParseError, next, vcf)
 
 def test_open():
     vcf = VcfReader("test_data/test1.vcf")
@@ -42,7 +42,7 @@ def test_samples():
 
 def test_read_variant():
     vcf = VcfReader("test_data/test1.vcf")
-    record = next(vcf.parser)
+    record = next(vcf)
     assert_equal(record.CHROM, '1')
     assert_equal(record.POS , 1025535)
     assert_equal(record.ID , 'rs113100937')
