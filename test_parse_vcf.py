@@ -72,6 +72,22 @@ def test_read_variant():
     assert_equal([gts2[x]['Sample_4'] for x in gts2],
                  [(0, 0), (7, 0), 7, 21, (0, 21, 276)])
 
+def test_retrieval_by_region():
+    vgz = VcfReader("test_data/test1.vcf.gz")
+    vgz.set_region("12:3128353-3128353")
+    for record in vgz:
+        assert_equal(record.CHROM, "12")
+        assert_equal(record.POS, 3128353)
+        assert_equal(record.REF, "T")
+        assert_equal(record.ALT, "C")
+    bcf = VcfReader("test_data/test1.bcf")
+    bcf.set_region("12", 3128352, 3128353)
+    for record in bcf:
+        assert_equal(record.CHROM, "12")
+        assert_equal(record.POS, 3128353)
+        assert_equal(record.REF, "T")
+        assert_equal(record.ALT, "C")
+
 def test_identical_svs():
     #check identical records are recognised as the same
     vcf = VcfReader("test_data/sv_test1.vcf")
