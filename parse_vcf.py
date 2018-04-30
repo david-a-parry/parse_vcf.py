@@ -143,8 +143,8 @@ class VcfReader(object):
             self.compressed = filename.endswith((".gz", ".bgz"))
         if self.bcf:
             if pysam is None:
-                raise ParseError("pysam not available. Please install (e.g. " +
-                                 "via 'pip install pysam' to parse bcf files")
+                raise ImportError("pysam not available. Please install (e.g. "+
+                                  "via 'pip install pysam' to parse bcf files")
             self.file = pysam.VariantFile(filename)
             self.reader = (rec.__str__().rstrip() for rec
                            in self.file.fetch() if rec.__str__().rstrip())
@@ -261,8 +261,9 @@ class VcfReader(object):
             #easy solution - compress and index with pysam if not compressed,
             #but will be slow...
             #less easy solution, implement a custom index to seek to and from
-            raise ParseError("Searching by location is not yet implemented " +
-                             "for non-bgzip compressed VCFs.")
+            raise NotImplementedError("Searching by location is not yet " +
+                                      "implemented for non-bgzip compressed" +
+                                      " VCFs.")
 
 
 class VcfHeader(object):
