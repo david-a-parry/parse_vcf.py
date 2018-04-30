@@ -1437,6 +1437,8 @@ class AltAllele(object):
         #if self._svalt_re.match(self.ALT) and other._svalt_re.match(other.ALT):
         if self.sv_info['LEFT_SVINSSEQ'] is not None:
             return self.compare_svinvseq(other)
+        if other.sv_info['LEFT_SVINSSEQ'] is not None:
+            return other.compare_svinvseq(self)
         if not self.compare_sv_pos_end(other):
             return False
         if (self.sv_info['SVLEN'] is not None and other.sv_info['SVLEN'] is not
