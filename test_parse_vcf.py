@@ -14,7 +14,7 @@ def test_column_error():
 
 def test_not_enough_fields_error():
     vcf = VcfReader("test_data/invalid_first_var.vcf")
-    assert_raises(ParseError, next, vcf.parser) 
+    assert_raises(ParseError, next, vcf.parser)
 
 def test_open():
     vcf = VcfReader("test_data/test1.vcf")
@@ -59,16 +59,16 @@ def test_read_variant():
     assert_equal(record.SPAN, 1025535)
 #1       1025535 rs113100937     C       G       992.83  PASS    AC=4;AF=8.439e-03;AN=474;
     gts = record.parsed_gts(samples=['Sample_1', 'Sample_138'])
-    assert_equal([gts[x]['Sample_1'] for x in gts], 
+    assert_equal([gts[x]['Sample_1'] for x in gts],
                  [(0, 0), (10, 0), 10, 30, (0, 30, 389)])
-    assert_equal([gts[x]['Sample_138'] for x in gts], 
+    assert_equal([gts[x]['Sample_138'] for x in gts],
                  [(0, 0), (23, 0), 23, 66, (0, 66, 842)])
     gts2 = record.parsed_gts()
-    assert_equal([gts[x]['Sample_1'] for x in gts], 
+    assert_equal([gts[x]['Sample_1'] for x in gts],
                  [gts2[x]['Sample_1'] for x in gts2])
-    assert_equal([gts[x]['Sample_138'] for x in gts], 
+    assert_equal([gts[x]['Sample_138'] for x in gts],
                  [gts2[x]['Sample_138'] for x in gts2])
     assert('Sample_4' not in gts['GT'])
-    assert_equal([gts2[x]['Sample_4'] for x in gts2], 
+    assert_equal([gts2[x]['Sample_4'] for x in gts2],
                  [(0, 0), (7, 0), 7, 21, (0, 21, 276)])
-                 
+
