@@ -80,13 +80,16 @@ COMMON_FORMAT = {
     'HAP':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False},
     'AHAP':{'Type':'Integer', 'Class':int, 'Number':1, 'Split':False}
 }
+_svalt_re = re.compile(r'''<(\w+)(:\w+)*>''') #group 1 gives SV type
+_bnd_re = re.compile(r'''^(([ACTGN]*)[\[\]]\w+):\d+[\]\[]([ACGTN]*)$''')
+    #group 1 gives VEP CSQ allele
+
 
 class VcfReader(object):
     """
         A class for parsing Variant Call Format (VCF) files. Stores
-        header information as a VcfHeader object in self.header and an
-        iterable variant parser (returning VcfRecord objects) in
-        self.parser.
+        header information as a VcfHeader object in self.header. Is an
+        iterable variant parser, returning VcfRecord objects.
 
         If your input is compressed and indexed, you may iterate over
         genomic regions instead of processing through the file line by
@@ -95,13 +98,13 @@ class VcfReader(object):
         Examples:
             #process line by line
             >>> v = VcfReader('path/to/my/input.vcf')
-            >>> for record in v.parser:
+            >>> for record in v
             ... #do something with each record
 
             #process variants overlapping a given region
             >>> v = VcfReader('path/to/my/indexed.vcf.gz')
             >>> v.set_region(chrom='chr1', start=899999 end=1000000)
-            >>> for record in v.parser:
+            >>> for record in v:
             ... #do something with each record
 
     """
@@ -176,6 +179,12 @@ class VcfReader(object):
         self.col_header  = self.header.col_header
         self.parser      = (VcfRecord(line, self,) for line in self.reader)
 
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self.parser)
+
     def _read_header(self):
         """
             Called after opening VCF. This reads the meta header lines
@@ -217,7 +226,7 @@ class VcfReader(object):
 
             >>> v = VcfReader(my_vcf)
             >>> v.set_region('chr1') #get all variants on chr1
-            >>> for record in v.parser:
+            >>> for record in v:
             ... #do something with each record
 
             Because start coordinates are 0-based, to retrieve a variant
@@ -546,9 +555,6 @@ class VcfRecord(object):
         from a VCF file. May contain multiple alternate alleles.
     '''
 
-    _svalt_re = re.compile(r'''<(\w+)(:\w+)*>''') #group 1 gives SV type
-    _bnd_re = re.compile(r'''^(([ACTGN]*)[\[\]]\w+):\d+[\]\[]([ACGTN]*)$''')
-        #group 1 gives VEP CSQ allele
     _gt_splitter = re.compile(r'[\/\|]')
 
     __slots__ = ['header', 'cols', 'CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL',
@@ -672,26 +678,36 @@ class VcfRecord(object):
 
     def _minimize_alleles(self):
         self.DECOMPOSED_ALLELES = []
+        is_sv = False
+        if 'SVTYPE' in self.INFO_FIELDS:
+            is_sv = True
         for alt in self.ALLELES[1:]:
-            ref = self.ALLELES[0]
-            pos = self.POS
-            while len(ref) > 1 and len(alt) > 1:
-                if ref[-1] == alt[-1]:               #remove identical suffixes
-                    ref = ref[:-1]
-                    alt = alt[:-1]
-                else:
-                    break
-            while len(ref) > 1 and len(alt) > 1:
-                if ref[0] == alt[0]:                 #remove identical prefixes
-                    ref = ref[1:]
-                    alt = alt[1:]
-                    pos += 1
-                else:
-                    break
-            self.DECOMPOSED_ALLELES.append(AltAllele(chrom=self.CHROM,
-                                            pos=pos, ref=ref, alt=alt))
-
-
+            if is_sv:
+                self.DECOMPOSED_ALLELES.append(AltAllele(chrom=self.CHROM,
+                                                         pos=self.POS,
+                                                         ref=self.REF,
+                                                         alt=self.ALT,
+                                                         is_sv=True,
+                                                         record=self))
+            else:
+                ref = self.ALLELES[0]
+                pos = self.POS
+                while len(ref) > 1 and len(alt) > 1:
+                    if ref[-1] == alt[-1]:           #remove identical suffixes
+                        ref = ref[:-1]
+                        alt = alt[:-1]
+                    else:
+                        break
+                while len(ref) > 1 and len(alt) > 1:
+                    if ref[0] == alt[0]:             #remove identical prefixes
+                        ref = ref[1:]
+                        alt = alt[1:]
+                        pos += 1
+                    else:
+                        break
+                self.DECOMPOSED_ALLELES.append(AltAllele(chrom=self.CHROM,
+                                                         pos=pos, ref=ref,
+                                                         alt=alt))
 
     @property
     def INFO_FIELDS(self):
@@ -857,7 +873,7 @@ class VcfRecord(object):
             input VCF the following syntax should be used:
 
             >>> v = VcfReader(my_vcf)
-            >>> for record in v.parser:
+            >>> for record in v:
             ...     calls = [record.CALLS[x] for x in record.samples]
 
         '''
@@ -1278,61 +1294,175 @@ class AltAllele(object):
         allele call. Features are 'CHROM', 'POS', 'REF' and 'ALT'.
     '''
 
-    __slots__ = ['CHROM', 'POS', 'REF', 'ALT']
+    __slots__ = ['CHROM', 'POS', 'REF', 'ALT', 'is_sv', 'sv_info',
+                 'breakpoint_precision']
 
-    def __init__(self, record=None, allele_index=1, chrom=None, pos=None,
-                 ref=None, alt=None):
+    def __init__(self, chrom, pos, ref, alt, is_sv=False, record=None,
+                 breakpoint_precision=0.1):
         '''
             Either created from a given VcfRecord and the index of the
             allele to be represented or from chrom, pos, ref and alt
             arguments.
 
             Args:
-                record:       VcfRecord object containing the allele of
-                              interest. Uses 'allele_index' argument to
-                              determine the allele to represent.
+                chrom:     chromosome/contig.
 
-                allele_index: index of the allele to represent (e.g. 1
-                              for the first ALT allele, 2 for the
-                              second or 0 for the REF allele).
-                              Default = 1.
+                pos:       position of ref allele.
 
-                chrom:        chromosome/contig (required if not using
-                              a VcfRecord for construction, ignored
-                              otherwise).
+                ref:       reference allele.
 
-                pos:          position of ref allele (required if not
-                              using a VcfRecord for construction,
-                              ignored otherwise).
+                alt:       alternative allele.
 
-                ref:          reference allele (required if not using a
-                              VcfRecord for construction, ignored
-                              otherwise).
+                is_sv:     True if record represents a structural variant.
+                           Default=False.
 
-                alt:          alternative allele (required if not using
-                              a VcfRecord for construction, ignored
-                              otherwise).
+                record     VcfRecord object containing the allele of
+                           interest. Required if allele is a structural
+                           variant.
+
+                breakpoint_precision:
+                           Structural variants are considered equal if
+                           breakpoints differ by this fraction or less
+                           of the length of the smaller variant. For
+                           example, when comparing a 1000 bp deletion to
+                           another equally sized or larger deletion, if
+                           breakpoint_precision is set to 0.1 then
+                           breakpoints may differ by 100bp and the two
+                           variants will be considered equal. If 'CIPOS'
+                           and 'CIEND' fields are available, these will
+                           be used to set the lower and upper bounds.
+                           Set this to 0.0 to endpoints to be exactly
+                           matching or within the 'CIPOS' and 'CIEND 
+                           intervals (if available). Default=0.1.
+
 
         '''
-
-        if record is not None:
-            self.CHROM = record.CHROM
-            self.POS   = record.POS
-            self.REF   = record.REF
-            self.ALT   = record.ALT
-        else:
-            self.CHROM = chrom
-            self.POS   = pos
-            self.REF   = ref
-            self.ALT   = alt
+        self.CHROM = chrom
+        self.POS   = pos
+        self.REF   = ref
+        self.ALT   = alt
+        self.is_sv = is_sv
+        self.breakpoint_precision = breakpoint_precision
+        self.sv_info = dict()
+        if self.is_sv:
+            if record is None:
+                raise ParseError("record argument is required if AltAllele " +
+                                 "is a structural variant (is_sv == True)")
+            sv_fields = ['SVTYPE', 'END',  'CIPOS', 'CIEND', 'SVLEN',
+                         'IMPRECISE', 'LEFT_SVINSSEQ', 'RIGHT_SVINSSEQ']
+            inf = record.parsed_info_fields(sv_fields)
+            for x in sv_fields:
+                self.sv_info[x] = inf[x] if x in inf else None
+            if isinstance(self.sv_info['SVLEN'], list): #Manta gives Number as '.'
+                self.sv_info['SVLEN'] = self.sv_info['SVLEN'][0]
 
     def __eq__(self, other):
+        if self.is_sv:
+            return self._compare_svs(other)
+        elif other.is_sv:
+            return False
         return (self.CHROM == other.CHROM and self.POS == other.POS and
                 self.REF == other.REF and self.ALT == other.ALT)
 
-class HeaderError(Exception):
+    def _compare_svs(self, other):
+        '''
+            Return True if both are SVs and have same type and
+            breakpoints. Assumes self is a SV.
+
+            Args:
+                self:   This AltAllele
+
+                other:  Another AltAllele
+
+        '''
+        if self.CHROM != other.CHROM:
+            return False
+        if self.sv_info['SVTYPE'] != other.sv_info['SVTYPE']:
+            return False
+        if self.sv_info['SVTYPE'] == 'BND':
+            return self.compare_bnd(other)
+        elif self.sv_info['SVTYPE'] == 'INS':
+            return self.compare_svins(other)
+        else:
+            return self.compare_sv_pos_end(other)
+
+    def compare_sv_pos_end(self, other):
+        s_len = abs(self.sv_info['SVLEN'])
+        o_len = abs(other.sv_info['SVLEN'])
+        prec_margin = self.breakpoint_precision * min(s_len, o_len)
+        #check start POS are close enough to each other
+        if self.POS != other.POS:
+            s_pos_int = (self.POS - prec_margin, self.POS + prec_margin)
+            o_pos_int = (other.POS - prec_margin, other.POS + prec_margin)
+            if self.sv_info['CIPOS'] is not None:
+                s_pos_int = (self.POS - self.sv_info['CIPOS'][0] - prec_margin,
+                             self.POS + self.sv_info['CIPOS'][1] + prec_margin)
+            if other.sv_info['CIPOS'] is not None:
+                o_pos_int = (other.POS - other.sv_info['CIPOS'][0] -
+                             prec_margin,
+                             other.POS + other.sv_info['CIPOS'][1] +
+                             prec_margin)
+            if s_pos_int[0] > o_pos_int[1] or s_pos_int[1] < o_pos_int[0]:
+                return False
+        #check end POS are close enough to each other
+        if self.sv_info['END'] != other.sv_info['END']:
+            s_end_int = (self.sv_info['END'] - prec_margin,
+                         self.sv_info['END'] + prec_margin)
+            o_end_int = (other.sv_info['END'] - prec_margin,
+                         other.sv_info['END'] + prec_margin)
+            if self.sv_info['CIEND'] is not None:
+                s_end_int = (self.sv_info['END'] - self.sv_info['CIEND'][0] -
+                             prec_margin,
+                             self.sv_info['END'] + self.sv_info['CIEND'][1] +
+                             prec_margin)
+            if other.sv_info['CIEND'] is not None:
+                o_end_int = (other.sv_info['END'] - other.sv_info['CIEND'][0],
+                             other.sv_info['END'] + other.sv_info['CIEND'][1])
+            if s_end_int[0] > o_end_int[1] or s_end_int[1] < o_end_int[0]:
+                return False
+        return True
+
+    def compare_bnd(self, other):
+        '''
+            Crude check on two BNDs - only checks standard POS/
+            REF/ALT fields for equality.
+        '''
+        return (self.POS == other.POS and self.REF == other.REF and 
+                self.ALT == other.ALT)
+
+    def compare_svins(self, other):
+        # for these purposes we don't care if exact insertion is the same,
+        # merely whether it is of roughly equal length
+        #if self._svalt_re.match(self.ALT) and other._svalt_re.match(other.ALT):
+        if self.sv_info['LEFT_SVINSSEQ'] is not None:
+            return self.compare_svinvseq(other)
+        if not self.compare_sv_pos_end(other):
+            return False
+        if (self.sv_info['SVLEN'] is not None and other.sv_info['SVLEN'] is not
+                None):
+            l = sorted([self.sv_info['SVLEN'], other.sv_info['SVLEN']])
+            if l[1] <= l[0] + (self.breakpoint_precision * l[0]):
+                return True
+            else:
+                return False
+
+    def compare_svinvseq(self, other):
+        '''
+            For Manta large insertions that are not fully assembled,
+            return True if LEFT_SVINVSEQ and RIGHT_SVINVSEQ are
+            identical for self and other.
+        '''
+        if self.POS != other.POS:
+            return False
+        if 'LEFT_SVINSSEQ' not in other.sv_info:
+            return False
+        return (self.sv_info['LEFT_SVINSSEQ'] == other.sv_info['LEFT_SVINSSEQ']
+                and self.sv_info['RIGHT_SVINSSEQ'] ==
+                other.sv_info['RIGHT_SVINSSEQ'])
+
+class HeaderError(ValueError):
     pass
 
 
-class ParseError(Exception):
+class ParseError(ValueError):
     pass
