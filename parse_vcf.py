@@ -239,20 +239,33 @@ class VcfReader(object):
         """
         if not self._is_reg_file:
             raise ParseError("Cannot run set_region() on a non-regular file")
-        if (self.compressed):
+        if self.compressed or self.bcf:
             if not self._tabix:
                 if not pysam:
                     raise ParseError("pysam not available. Please install " +
                                      "(e.g. via 'pip install pysam' to " +
                                      "search by location on bgzip compressed" +
                                      "VCFs.")
-                idx = self.filename + '.tbi'
+                if self.bcf:
+                    idx = self.filename + '.csi'
+                    preset = 'bcf'
+                else:
+                    idx = self.filename + '.tbi'
+                    preset = 'vcf'
                 if not os.path.isfile(idx):   #create index if it doesn't exist
-                    pysam.tabix_index(self.filename, preset="vcf")
-                self._tabix = pysam.Tabixfile(self.filename,
-                                              encoding=self.encoding)
+                    pysam.tabix_index(self.filename, preset=preset)
+                if self.bcf:
+                    self._tabix = pysam.VariantFile(self.filename)
+                else:
+                    self._tabix = pysam.Tabixfile(self.filename, index=idx,
+                                                  encoding=self.encoding)
             try:
-                self.reader = self._tabix.fetch(str(chrom), start, end)
+                if self.bcf:
+                    self.reader = (rec.__str__().rstrip() for rec
+                                   in self.file.fetch(str(chrom), start, end) 
+                                   if rec.__str__().rstrip())
+                else:
+                    self.reader = self._tabix.fetch(str(chrom), start, end)
                 self.parser = (VcfRecord(line, self,) for line in self.reader)
             except ValueError:
                 self.reader = iter([])
