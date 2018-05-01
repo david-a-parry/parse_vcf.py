@@ -262,7 +262,7 @@ class VcfReader(object):
             try:
                 if self.bcf:
                     self.reader = (rec.__str__().rstrip() for rec
-                                   in self.file.fetch(str(chrom), start, end) 
+                                   in self.file.fetch(str(chrom), start, end)
                                    if rec.__str__().rstrip())
                 else:
                     self.reader = self._tabix.fetch(str(chrom), start, end)
@@ -1179,8 +1179,8 @@ class VcfRecord(object):
                 self._vep_allele[alt] = i
                 asterisk = True
             else:
-                matches_sv = self._svalt_re.match(alt)
-                matches_bnd = self._bnd_re.match(alt)
+                matches_sv = _svalt_re.match(alt)
+                matches_bnd = _bnd_re.match(alt)
                 if matches_sv or matches_bnd:
                     is_sv = True
                     #sometimes VEP unhelpfully just uses '-'
@@ -1441,13 +1441,13 @@ class AltAllele(object):
             Crude check on two BNDs - only checks standard POS/
             REF/ALT fields for equality.
         '''
-        return (self.POS == other.POS and self.REF == other.REF and 
+        return (self.POS == other.POS and self.REF == other.REF and
                 self.ALT == other.ALT)
 
     def compare_svins(self, other):
         # for these purposes we don't care if exact insertion is the same,
         # merely whether it is of roughly equal length
-        #if self._svalt_re.match(self.ALT) and other._svalt_re.match(other.ALT):
+        #if _svalt_re.match(self.ALT) and _svalt_re.match(other.ALT):
         if self.sv_info['LEFT_SVINSSEQ'] is not None:
             return self.compare_svinvseq(other)
         if other.sv_info['LEFT_SVINSSEQ'] is not None:
