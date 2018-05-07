@@ -1308,8 +1308,8 @@ class AltAllele(object):
         allele call. Features are 'CHROM', 'POS', 'REF' and 'ALT'.
     '''
 
-    __slots__ = ['CHROM', 'POS', 'REF', 'ALT', 'is_sv', 'sv_info',
-                 'breakpoint_precision']
+    __slots__ = ['CHROM', 'POS', 'REF', 'ALT', 'is_sv', '__var_type',
+                 'sv_info', 'breakpoint_precision']
 
     def __init__(self, chrom, pos, ref, alt, is_sv=False, record=None,
                  breakpoint_precision=0.1):
@@ -1346,7 +1346,7 @@ class AltAllele(object):
                            and 'CIEND' fields are available, these will
                            be used to set the lower and upper bounds.
                            Set this to 0.0 to endpoints to be exactly
-                           matching or within the 'CIPOS' and 'CIEND 
+                           matching or within the 'CIPOS' and 'CIEND
                            intervals (if available). Default=0.1.
 
 
@@ -1355,6 +1355,7 @@ class AltAllele(object):
         self.POS   = pos
         self.REF   = ref
         self.ALT   = alt
+        self.__var_type = None
         self.is_sv = is_sv
         self.breakpoint_precision = breakpoint_precision
         self.sv_info = dict()
@@ -1369,6 +1370,30 @@ class AltAllele(object):
                 self.sv_info[x] = inf[x] if x in inf else None
             if isinstance(self.sv_info['SVLEN'], list): #Manta gives Number as '.'
                 self.sv_info['SVLEN'] = self.sv_info['SVLEN'][0]
+
+    @property
+    def var_type(self):
+        '''
+            String indicating whether the ALT is a DELETION, INSERTION,
+            SNV, MNV or SV.
+        '''
+        if self.__var_type is None:
+            if self.is_sv:
+                self.__var_type = 'SV'
+            elif len(self.REF) < len(self.ALT):
+                self.__var_type = 'INSERTION'
+            elif len(self.REF) > len(self.ALT):
+                self.__var_type = 'DELETION'
+            else:
+                if len(self.REF) == 1:
+                    self.__var_type = 'SNV'
+                else:
+                    self.__var_type = 'MNV'
+        return self.__var_type
+
+    @var_type.setter
+    def var_type(self, t):
+        self.__var_type = t
 
     def __eq__(self, other):
         if self.is_sv:
