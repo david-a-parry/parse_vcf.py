@@ -88,6 +88,20 @@ def test_retrieval_by_region():
         assert_equal(record.REF, "T")
         assert_equal(record.ALT, "C")
 
+def test_var_types():
+    vcf = VcfReader("test_data/test_insertions.vcf")
+    for record in vcf:
+        assert_equal('INSERTION', record.DECOMPOSED_ALLELES[0].var_type)
+    vcf = VcfReader("test_data/test_deletions.vcf")
+    for record in vcf:
+        assert_equal('DELETION', record.DECOMPOSED_ALLELES[0].var_type)
+    vcf = VcfReader("test_data/test_snvs.vcf")
+    for record in vcf:
+        assert_equal('SNV', record.DECOMPOSED_ALLELES[0].var_type)
+    vcf = VcfReader("test_data/sv_test1.vcf")
+    for record in vcf:
+        assert_equal('SV', record.DECOMPOSED_ALLELES[0].var_type)
+
 def test_identical_svs():
     #check identical records are recognised as the same
     vcf = VcfReader("test_data/sv_test1.vcf")
