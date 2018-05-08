@@ -746,6 +746,15 @@ class VcfRecord(object):
     def INFO_FIELDS(self, i):
         self.__INFO_FIELDS = i
 
+    def remove_info_fields(self, fields):
+        ''' Remove given INFO fields from the record if they exists.'''
+        rewrite = False
+        for f in fields:
+            val = self.INFO_FIELDS.pop(f, None)
+            rewrite = True if val is not None else rewrite
+        if rewrite:
+            self._rewrite_info_string()
+
     def add_info_fields(self, info, append_existing=False):
         '''
             Requires a dict of INFO field names to a list of values.
@@ -806,8 +815,6 @@ class VcfRecord(object):
                 info.append(f + '=' + str(v))
         self.INFO = str.join(';', info)
         self.cols[7] = self.INFO #also change cols so is reflected in __str__
-
-
 
     def parsed_info_fields(self, fields=None):
         if fields is not None:
