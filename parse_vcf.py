@@ -726,11 +726,11 @@ class VcfRecord(object):
     @property
     def INFO_FIELDS(self):
         '''
-        A dict of INFO field names to values. All returned values are Strings
-        except for Flags which are assigned True.
+            A dict of INFO field names to values. All returned values
+            are Strings except for Flags which are assigned True.
 
-        To obtain values parsed into the appropriate Type as defined by the
-        VCF header, use the 'parsed_info_fields()' method.
+            To obtain values parsed into the appropriate Type as defined
+            by the VCF header, use the 'parsed_info_fields()' method.
         '''
         if self.__INFO_FIELDS is None:
             self.__INFO_FIELDS = OrderedDict()
@@ -865,7 +865,8 @@ class VcfRecord(object):
 
     @property
     def SPAN(self):
-        ''' Returns end position of a record according to END INFO
+        '''
+            Returns end position of a record according to END INFO
             field if available, or otherwise POS + len(REF) -1.
         '''
         if self.__SPAN == None:
@@ -878,6 +879,42 @@ class VcfRecord(object):
     @SPAN.setter
     def SPAN(self, end):
         self.__SPAN = end
+
+    def add_format_field(self, field, sample_values, default_value='.'):
+        '''
+            Add FORMAT field and values to record.
+
+            Args:
+                field:  Name of the field to add. If it already exists
+                        for this record it will be overwritten.
+
+                sample_values:
+                        dict of sample IDs to values for this field.
+                        Missing samples will be given the value
+                        specified by 'default_value' argument.
+
+                default_value:
+                        Value to add to genotype calls for samples not
+                        provided in the sample_values dict. Defaults to
+                        '.'.
+
+        '''
+        self._got_gts = False #will need to reparse calls
+        if field in self.GT_FORMAT:
+            i = self.GT_FORMAT.index(field)
+        else:
+            i = len(self.GT_FORMAT)
+            self.GT_FORMAT.append(field)
+            self.FORMAT = ':'.join(self.GT_FORMAT)
+            self.cols[8] = self.FORMAT
+        for s in self.header.samples:
+            value = sample_values.get(s, default_value)
+            call = self.CALLS[s].split(':')
+            if len(call) < i: #pad truncated calls
+                call = call + ['.'] * (i - len(call))
+            new_call = ':'.join(call[0:i] + [value] + call[i:])
+            self.cols[self.header.sample_cols[s]] = new_call
+            self.__CALLS[s] = new_call
 
     @property
     def CALLS(self):
@@ -971,7 +1008,6 @@ class VcfRecord(object):
                 >>> s1['GQ']
                 '30'
         '''
-
         try:
             return self._SAMPLE_GTS[sample]
         except KeyError:
@@ -989,7 +1025,8 @@ class VcfRecord(object):
                 raise ParseError("Sample {} is not in VCF" .format(sample))
 
     def parsed_gts(self, samples=None, fields=None):
-        ''' Returns a dict of GT field names to dicts of sample names
+        '''
+            Returns a dict of GT field names to dicts of sample names
             to values. By default, values for all samples and fields
             will be retrieved, but a list of sample IDs and a list of
             FORMAT fields to retrieve can be given.
