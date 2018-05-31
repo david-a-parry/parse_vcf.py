@@ -575,7 +575,7 @@ class VcfRecord(object):
                  'FILTER', 'INFO', 'FORMAT', '__SPAN', '__CSQ', 'samples',
                  '_sample_idx', '__CALLS', '__ALLELES', '__DECOMPOSED_ALLELES',
                  '__INFO_FIELDS',  'GT_FORMAT', '_SAMPLE_GTS', '_got_gts',
-                 '_vep_allele', '_parsed_info', '_parsed_gts']
+                 '_vep_allele', '_parsed_info', '_parsed_gts', '__is_sv']
 
     def __init__(self, line, caller):
         '''
@@ -619,13 +619,13 @@ class VcfRecord(object):
         self.ALLELES            = None
         self.header             = caller.header
         self.CSQ                = None
+        self.IS_SV              = None
         self._SAMPLE_GTS        = {}
         self._vep_allele        = {}
         self._parsed_info       = {}
         self._parsed_gts        = defaultdict(dict)
         self._got_gts           = False  #flag indicating whether we've already
                                          #retrieved GT dicts for every sample
-
         if len(self.cols) > 8:
             self.FORMAT = self.cols[8]
             self.GT_FORMAT = self.FORMAT.split(':')
@@ -660,7 +660,16 @@ class VcfRecord(object):
             self.ID = str.join(';', uids)
         self.cols[2] = self.ID     #also change cols so is reflected in __str__
 
+    @property
+    def IS_SV(self):
+        '''True if record represents a structural variant'''
+        if self.__is_sv is None:
+            self.__is_sv = 'SVTYPE' in self.INFO_FIELDS
+        return self.__is_sv
 
+    @IS_SV.setter
+    def IS_SV(self, is_sv):
+        self.__is_sv = is_sv
 
     @property
     def ALLELES(self):
@@ -692,11 +701,8 @@ class VcfRecord(object):
 
     def _minimize_alleles(self):
         self.DECOMPOSED_ALLELES = []
-        is_sv = False
-        if 'SVTYPE' in self.INFO_FIELDS:
-            is_sv = True
         for alt in self.ALLELES[1:]:
-            if is_sv:
+            if self.IS_SV:
                 self.DECOMPOSED_ALLELES.append(AltAllele(chrom=self.CHROM,
                                                          pos=self.POS,
                                                          ref=self.REF,
