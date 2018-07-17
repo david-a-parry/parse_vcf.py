@@ -333,7 +333,8 @@ class VcfHeader(object):
             if self.col_header[8] != 'FORMAT':
                 raise HeaderError('Invalid column name. Expected {}, got {}'
                                   .format('FORMAT', self.col_header[8]))
-        self.metadata = {}
+        self.metadata = {'INFO':   dict(),
+                         'FORMAT': dict()}
         self.csq_label = None
         self.csq_fields = None
         self._info_field_translater = {}
