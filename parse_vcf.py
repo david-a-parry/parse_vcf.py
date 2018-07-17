@@ -408,7 +408,6 @@ class VcfHeader(object):
             self.fileformat = ff_match.group(2)
         for h in self.meta_header:
             self._parse_header_line(h)
-
         for field_type in ['FORMAT', 'INFO']:
             try:
                 for field in self.metadata[field_type]:
@@ -659,6 +658,24 @@ class VcfRecord(object):
             uids = set(ids + self.ID.split(';'))
             self.ID = str.join(';', uids)
         self.cols[2] = self.ID     #also change cols so is reflected in __str__
+
+    def add_filter(self, filters, replace=False):
+        '''
+            Add provided filters to FILTER field of VCF. If replace is
+            False, filters will be added to existing FILTER annotations
+            except for those annotated just 'PASS'.
+
+            Args:
+                filters:    A list of filter strings to add.
+
+                replace:    If True replace any existing filter annotations.
+
+        '''
+        if not replace and self.FILTER != 'PASS':
+            filters.append(self.FILTER)
+        filters = set(filters)
+        self.FILTER = ';'.join(sorted(filters))
+        self.cols[6] = self.FILTER
 
     @property
     def IS_SV(self):
