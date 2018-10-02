@@ -1165,14 +1165,11 @@ class VcfRecord(object):
             if field == 'GT': #GT is a special case, make tuples of alleles
                 alleles = self._gt_splitter.split(val)
                 try:
-                    pv.append(tuple( int(x) for x in alleles))
+                    pv.append(tuple(None if x == '.' else int(x) for x in
+                                    alleles))
                 except ValueError:
-                    nocall = tuple(None for x in alleles if x == '.')
-                    if not nocall:
-                        raise ParseErrror("Could not parse GT {}"
-                                          .format(val) + " at {}:{}" .format(
-                                          self.CHROM, self.POS))
-                    pv.append(nocall)
+                    raise ParseErrror("Could not parse GT {} ".format(val) +
+                                      "at {}:{}".format(self.CHROM, self.POS))
             else:
                 try:
                     if f[1]:
