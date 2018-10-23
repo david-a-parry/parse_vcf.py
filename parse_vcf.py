@@ -808,7 +808,6 @@ class VcfRecord(object):
         self._rewrite_info_string()
 
     def _append_to_existing_info(self, field, values):
-
         if field in self.header.metadata['INFO']:
             if self.header.metadata['INFO'][field][-1]['Type'] == 'Flag':
                 self.INFO_FIELDS[field] = True
