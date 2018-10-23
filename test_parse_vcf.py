@@ -127,6 +127,53 @@ def test_different_svs():
             for a2 in r2.DECOMPOSED_ALLELES:
                 assert_not_equal(a1, a2)
 
+def test_add_info_field():
+    vcf = VcfReader("test_data/test1.vcf")
+    vcf.header.add_header_field(name='foobar',
+                                field_type='INFO',
+                                dictionary={'Number': 'A',
+                                            'Type': 'String',
+                                            'Description': 'a foo plus a bar',
+                                })
+    record = next(vcf)
+    record.add_info_fields(info={'foobar': 'foo1'}, append_existing=True)
+    record.add_info_fields(info={'foobar': 'foo2'}, append_existing=True)
+    assert_equal('foo1|foo2', record.INFO_FIELDS['foobar'])
+    assert_equal(['foo1|foo2'],
+                 record.parsed_info_fields(['foobar'])['foobar'])
+    vgz = VcfReader("test_data/test1.vcf.gz")
+    vgz.header.add_header_field(name='foobar',
+                                field_type='INFO',
+                                dictionary={'Number': 'A',
+                                            'Type': 'String',
+                                            'Description': 'a foo plus a bar',
+                                })
+    vgz.set_region("1:12368705-12368705") #a multiallelic variant
+    record = next(vgz)
+    i = 0
+    foos = []
+    for i in range(3):
+        foos.append('foo' + str(i))
+    record.add_info_fields(info={'foobar': ",".join(foos)})
+    assert_equal('foo0,foo1,foo2', record.INFO_FIELDS['foobar'])
+    foos = []
+    for i in range(3):
+        foos.append('foo' + str(i*2))
+    record.add_info_fields(info={'foobar': ",".join(foos)},
+                           append_existing=False)
+    assert_equal('foo0,foo2,foo4', record.INFO_FIELDS['foobar'])
+    foos = []
+    for i in range(3):
+        foos.append('foo' + str(i))
+    record.add_info_fields(info={'foobar': ",".join(foos)},
+                           append_existing=True)
+    assert_equal('foo0|foo0,foo2|foo1,foo4|foo2', record.INFO_FIELDS['foobar'])
+    assert_raises(ParseError,
+                  record.add_info_fields,
+                  info={'foobar': "value_for_only_one_allele"},
+                  append_existing=True,
+                 )
+
 if __name__ == '__main__':
     import nose
     nose.run(defaultTest = __name__)
