@@ -370,17 +370,21 @@ class VcfHeader(object):
         '''
 
         if self.__csq_fields is None:
-            try:
-                csq_header = self.metadata['INFO']['CSQ'][-1]
-                csq = 'CSQ'
-            except KeyError:
+            if self.__csq_label is None:
                 try:
-                    csq_header = self.metadata['INFO']['ANN'][-1]
-                    csq = 'ANN'
+                    csq_header = self.metadata['INFO']['CSQ'][-1]
+                    csq = 'CSQ'
                 except KeyError:
-                    raise HeaderError("No CSQ or ANN field in INFO header - "+
-                                      "unable to retrieve consequence fields.")
-            self.csq_label = csq
+                    try:
+                        csq_header = self.metadata['INFO']['ANN'][-1]
+                        csq = 'ANN'
+                    except KeyError:
+                        raise HeaderError("No CSQ or ANN field in INFO header - "+
+                                          "unable to retrieve consequence fields.")
+                self.csq_label = csq
+            else:
+                csq = self.__csq_label
+                csq_header = self.metadata['INFO'][csq][-1]
             match = self._csq_format_re.match(csq_header['Description'])
             if match:
                 self.__csq_fields = match.group(1).split('|')
