@@ -939,7 +939,7 @@ class VcfRecord(object):
             call = self.CALLS[s].split(':')
             if len(call) < i: #pad truncated calls
                 call = call + ['.'] * (i - len(call))
-            new_call = ':'.join(call[0:i] + [value] + call[i:])
+            new_call = ':'.join(call[0:i] + [value] + call[i+1:])
             self.cols[self.header.sample_cols[s]] = new_call
             self.__CALLS[s] = new_call
 
