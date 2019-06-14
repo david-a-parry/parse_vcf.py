@@ -1133,7 +1133,7 @@ class VcfRecord(object):
                 self._parsed_gts[f].update(d[f])
         return d
 
-    def _get_parsed_gt_fields(self, field, values=[]):
+    def _get_parsed_gt_fields(self, field, values=[], none_to_zeros=False):
         #TODO - make this more efficient with a cython extension
         '''
             Retrieves values of genotype field parsed so that the
@@ -1148,6 +1148,11 @@ class VcfRecord(object):
                         header.
 
                 values: list of values from a genotype field
+
+                none_to_zeros:
+                        for float or integer FORMAT fields convert '.'
+                        values to zero instead of None.
+
         '''
 
         try:
@@ -1164,6 +1169,10 @@ class VcfRecord(object):
                                  "represented in VCF header.")
         #f[0] is the class type of field, f[1] = True if values should be split
         pv = []
+        split_default = None
+        if f[1] and none_to_zeros:
+            if f[0] is not None and f[0] is not str:
+                split_default = 0
         for val in values:
             if field == 'GT': #GT is a special case, make tuples of alleles
                 alleles = self._gt_splitter.split(val)
@@ -1176,17 +1185,21 @@ class VcfRecord(object):
             else:
                 try:
                     if f[1]:
-                        pv.append(tuple(map(f[0], val.split(','))))
+                        pv.append(tuple(f[0](x) if x != '.' else split_default
+                                  for x in val.split(',')))
                     else:
                         pv.append(f[0](val))
                 except (ValueError, TypeError, AttributeError) as err:
                     if val is None or val == '.':
+                        v = None
+                        if none_to_zeros:
+                            v = split_default
                         if f[1]:
-                            pv.append((None,))
+                            pv.append((v,))
                         else:
-                            pv.append(None)
+                            pv.append(v)
                     else:
-                        raise err
+                        #raise err
                         raise ParseError("Unexpected value ('{}')" .format(val)
                                        + " for {} " .format(field) + "FORMAT "
                                        + "field at {}:{}" .format(self.CHROM,
