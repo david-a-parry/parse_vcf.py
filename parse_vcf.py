@@ -959,16 +959,14 @@ class VcfRecord(object):
 
             >>> v = VcfReader(my_vcf)
             >>> for record in v:
-            ...     calls = [record.CALLS[x] for x in record.samples]
+            ...     calls = [record.CALLS[x] for x in record.header.samples]
 
         '''
-
         if self.__CALLS is None:
-            if self.header.sample_cols:
+            if self.header.samples:
                 calls = self.cols.pop()
                 self.cols.extend(calls.split("\t"))
-                self.__CALLS = dict([(s, self.cols[self.header.sample_cols[s]])
-                                      for s in self.header.samples])
+                self.__CALLS = dict(zip(self.header.samples, self.cols[9:]))
             else:
                 self.__CALLS = {}
         return self.__CALLS
